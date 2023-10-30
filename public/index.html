@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<title>Page Title</title>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+	<script src='main.js'></script> -->
+</head>
+
+<body>
+	<h1>PLACEHOLDER</h1>
+	<input type="file" name="file" id="file">
+	<button onclick="send()">SEND</button>
+	<div id="paths"></div>
+	<script>
+		function file() {
+			return document.getElementById("file").files[0]
+		}
+		function upload(name) {
+			return fetch("/api/upload", {
+				method: "POST",
+				body: file(),
+				headers: {
+					"File-Name": name
+				}
+			}).then(v => v.text())
+		}
+		async function send() {
+			
+			const container = document.getElementById("paths");
+
+			let line=document.createElement("p");
+			let file_name=document.getElementById("file").files[0].name;
+			const path=await upload(file_name);
+
+			line.innerHTML=`<a href="${path}">${file_name}</a>`;
+			container.appendChild(line)
+		}
+
+		const test = (name) => upload(name).then(v => console.log(v))
+	</script>
+</body>
+
+</html>
