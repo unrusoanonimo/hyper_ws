@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     util::{get_extension, PreparedResponse},
-    AppError, ExtendedRequest,
+    AppError, ExtendedRequest, ModulesSendable,
 };
 
 use hyper::{Body, Response};
@@ -75,16 +75,31 @@ pub fn redirect(path: &str, status: u16) -> Response<Body> {
         .unwrap()
 }
 
+pub fn check_route(url: &str, route: &str) -> bool {
+    url.starts_with(route) && (url.len() == route.len() || url.as_bytes()[route.len()] == b'/')
+}
+pub fn subroute_args(url: &str) -> std::str::Split<'_, char> {
+    (&url[1..]).split('/')
+}
+
 #[allow(dead_code, unused_variables)]
-async fn todo_router(req: ExtendedRequest, url: &str) -> Result<Response<Body>, AppError> {
+async fn todo_router(
+    req: ExtendedRequest,
+    url: &str,
+    modules: ModulesSendable<'_>,
+) -> Result<Response<Body>, AppError> {
     panic!("todo_router is only inteded to be used as placeholder");
 }
 
 const API: &str = "/api";
-pub async fn main_router(req: ExtendedRequest) -> Result<Response<Body>, AppError> {
+pub async fn main_router(
+    req: ExtendedRequest,
+    modules: ModulesSendable<'_>,
+) -> Result<Response<Body>, AppError> {
     let url: &str = &req.clean_url().to_string();
     match (req.method.as_str(), url) {
-        _ if url.starts_with(API) => api::router(req, &url[API.len()..]).await,
+        _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
+        _ if check_route(url, API) => api::router(req, &url[API.len()..], modules).await,
         ("GET", "/redirect") => Ok(redirect("/", 301)),
         ("GET", _) => public_path(req, url).ok_or(AppError::StatusCode(404)),
         _ => Err(AppError::StatusCode(404)),

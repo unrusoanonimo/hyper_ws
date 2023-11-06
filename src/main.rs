@@ -5,6 +5,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
+use rand::RngCore;
 use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Display;
@@ -18,6 +19,7 @@ use crate::router::send_file;
 
 mod config;
 mod logger;
+mod model;
 mod modules;
 mod router;
 mod util;
@@ -27,6 +29,9 @@ pub enum AppError {
     StatusCode(u16),
     Dev(&'static str),
 }
+impl AppError {
+    pub const SERVER_ERROR: Self = AppError::StatusCode(500);
+}
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "PETOU")
@@ -34,7 +39,10 @@ impl Display for AppError {
 }
 impl Error for AppError {}
 
-async fn handle(req: ExtendedRequest) -> Result<Response<Body>, Infallible> {
+async fn handle(
+    req: ExtendedRequest,
+    modules: ModulesSendable<'_>,
+) -> Result<Response<Body>, Infallible> {
     fn status_code(code: u16) -> Option<Response<Body>> {
         let file = File::open(format!("assets/error/{}.html", code)).ok()?;
         let prep = send_file(file).ok()?;
@@ -43,7 +51,7 @@ async fn handle(req: ExtendedRequest) -> Result<Response<Body>, Infallible> {
             .body(prep.body)
             .ok()
     }
-    let res = router::main_router(req).await;
+    let res = router::main_router(req, modules).await;
     Ok(match res {
         Ok(r) => r,
         Err(e) => match e {
@@ -53,15 +61,18 @@ async fn handle(req: ExtendedRequest) -> Result<Response<Body>, Infallible> {
     })
 }
 
+type ModulesSendable<'a> = Arc<AppModules<'a>>;
+
 #[tokio::main]
 async fn main() {
+    // use rand::Rng;
+    let mut a: [u8; 16] = [0; 16];
+    rand::thread_rng().fill_bytes(&mut a);
+
     logger::setup();
 
-    let modules = Arc::new(Mutex::new(AppModules::new()));
+    let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
 
-    let mut m = modules.lock().await;
-    dbg!(m.db.get_by_name("Alice"));
-    dbg!(m.db.get_by_name("Alice"));
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 
@@ -69,9 +80,10 @@ async fn main() {
     // And a MakeService to handle each connection...
     let make_service = make_service_fn(|conn: &AddrStream| {
         let xtra = Arc::new(Mutex::new(ExtendedReqXtraData::new(conn)));
+        let module = modules.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                handle(ExtendedRequest::new(req, xtra.clone()))
+                handle(ExtendedRequest::new(req, xtra.clone()), Arc::clone(&module))
             }))
         }
     });

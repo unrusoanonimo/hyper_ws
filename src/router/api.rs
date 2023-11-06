@@ -7,41 +7,69 @@ use std::{
 use http::Response;
 use hyper::Body;
 
-use crate::{AppError, ExtendedRequest};
+use crate::{model, AppError, ExtendedRequest, ModulesSendable};
 
-use super::ROOT;
+use super::{check_route, subroute_args, ROOT};
 
-pub async fn router(mut req: ExtendedRequest, url: &str) -> Result<Response<Body>, AppError> {
+const SUB: &str = "/sub";
+pub async fn router(
+    mut req: ExtendedRequest,
+    url: &str,
+    modules: ModulesSendable<'_>,
+) -> Result<Response<Body>, AppError> {
     match (req.method.as_str(), url) {
-        ("GET", ROOT) => Ok(Response::builder().body(Body::from("root")).unwrap()),
+        ("GET", ROOT) => Ok(Response::builder()
+            .body(Body::from(
+                modules.db.lock().await.get_by_name("Alice").unwrap(),
+            ))
+            .unwrap()),
         (_, "/echo") => {
             let body_data = req.take_body().await.unwrap_or_else(|| vec![]);
             Ok(Response::builder().body(Body::from(body_data)).unwrap())
         }
-        ("POST", "/upload") => {
-            let name_header =
-                String::from_utf8(req.get_header("File-Name").unwrap_or(&[]).to_vec()).unwrap();
+        ("GET", "/count") => {
+            let mut count = modules.c.lock().await;
+            *count += 1;
+            let visites = *count;
+            drop(count);
 
-            let extension = Path::new(&name_header)
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
+            let ip = req.xtra().await.remote_addr.ip();
+
+            dbg!(ip);
+            let response = reqwest::get(format!("https://ipinfo.io/{}/json", ip))
+                .await
+                .or(Err(AppError::SERVER_ERROR))?
+                .text()
+                .await
+                .or(Err(AppError::SERVER_ERROR))?;
+
+            let r = serde_json::from_str::<model::IpInfo>(&response).ok();
+            println!("{}", response);
+            dbg!(r);
+
+            Ok(Response::builder()
+                .body(Body::from(format!("TOTAL_VISITES={visites}")))
+                .unwrap())
+        }
+        _ if check_route(url, SUB) => {
+            let a: Box<[_]> = subroute_args(url).collect();
+            dbg!(a);
+            Ok(Response::builder().body(Body::from("a")).unwrap())
+        }
+        ("POST", "/upload") => {
+            let name_uncheked = subroute_args(url).next().ok_or(AppError::StatusCode(400))?;
+
+            let name = Path::new(&name_uncheked)
+                .file_name()
+                .ok_or(AppError::StatusCode(400))?;
             let mut path = PathBuf::from("public/uploads");
 
-            let file_content = req.read_body().await.unwrap();
-            let mut file_name = sha256::digest(file_content);
-            if extension.len() > 0 {
-                file_name.push('.');
-                file_name += extension;
-            }
-
-            path.push(&file_name);
+            path.push(&name);
             let mut file = File::create(path).unwrap();
             file.write_all(req.read_body().await.unwrap()).unwrap();
 
             let mut url = "/uploads/".to_string();
-            url += &file_name;
+            url += &name.to_string_lossy();
 
             Ok(Response::builder().body(Body::from(url)).unwrap())
         }
