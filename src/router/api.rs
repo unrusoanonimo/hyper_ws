@@ -20,7 +20,8 @@ pub async fn router(
     match (req.method.as_str(), url) {
         ("GET", ROOT) => Ok(Response::builder()
             .body(Body::from(
-                modules.db.lock().await.get_by_name("Alice").unwrap(),
+                "a"
+                // modules.db.lock().await.get_by_name("Alice").unwrap(),
             ))
             .unwrap()),
         (_, "/echo") => {

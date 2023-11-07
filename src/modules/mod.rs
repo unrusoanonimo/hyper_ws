@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use sqlite::Connection;
 use tokio::sync::Mutex;
 
@@ -71,3 +73,22 @@ CREATE TABLE users (name TEXT, age INTEGER);
 INSERT INTO users VALUES ('Alice', 42);
 INSERT INTO users VALUES ('Bob', 69);
 ";
+
+#[derive(Debug)]
+pub enum Error {
+    DbError(sqlite::Error),
+    InvalidOperation
+}
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for Error {}
+impl From<sqlite::Error> for Error {
+    fn from(value: sqlite::Error) -> Self {
+        Self::DbError(value)
+    }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
