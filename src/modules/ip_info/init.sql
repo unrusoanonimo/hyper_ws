@@ -1,4 +1,4 @@
-CREATE TABLE `IP_INFO` (
+CREATE TABLE IF NOT EXISTS `IP_INFO` (
     `ip` VARCHAR(45) NOT NULL,
     `city` VARCHAR(64) NOT NULL,
     `region` VARCHAR(64) NOT NULL,
@@ -7,5 +7,6 @@ CREATE TABLE `IP_INFO` (
     `org` VARCHAR(64),
     `postal` VARCHAR(64) NOT NULL,
     `timezone` VARCHAR(64) NOT NULL,
+    `visites` INTEGER NOT NULL,
     PRIMARY KEY (`ip`)
 );

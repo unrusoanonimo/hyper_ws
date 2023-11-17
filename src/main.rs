@@ -5,7 +5,6 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
-use rand::RngCore;
 use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Display;
@@ -31,6 +30,9 @@ pub enum AppError {
 }
 impl AppError {
     pub const SERVER_ERROR: Self = AppError::StatusCode(500);
+    pub const BAD_REQUEST: Self = AppError::StatusCode(400);
+    pub const FORBIDDEN: Self = AppError::StatusCode(403);
+    pub const NOT_FOUND: Self = AppError::StatusCode(404);
 }
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,6 +40,14 @@ impl Display for AppError {
     }
 }
 impl Error for AppError {}
+impl From<modules::Error> for AppError {
+    fn from(value: modules::Error) -> Self {
+        match value {
+            modules::Error::DbError(_) => Self::SERVER_ERROR,
+            modules::Error::InvalidOperation => Self::BAD_REQUEST,
+        }
+    }
+}
 
 async fn handle(
     req: ExtendedRequest,
@@ -65,13 +75,12 @@ type ModulesSendable<'a> = Arc<AppModules<'a>>;
 
 #[tokio::main]
 async fn main() {
-    // use rand::Rng;
-    let mut a: [u8; 16] = [0; 16];
-    rand::thread_rng().fill_bytes(&mut a);
-
     logger::setup();
 
     let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
+
+    let a=|| 3;
+    {}
 
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));

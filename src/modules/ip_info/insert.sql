@@ -1,0 +1,1 @@
+INSERT INTO IP_INFO (ip, city, region, country, loc, org, postal, timezone, visites) VALUES (:ip, :city, :region, :country, :loc, :org, :postal, :timezone, :visites);

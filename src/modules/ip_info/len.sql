@@ -1,0 +1,1 @@
+SELECT count(*) as len FROM IP_INFO;

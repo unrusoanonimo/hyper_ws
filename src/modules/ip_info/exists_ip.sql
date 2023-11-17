@@ -1,0 +1,1 @@
+SELECT count(*) AS "exists" FROM IP_INFO WHERE ip == :ip LIMIT 1;

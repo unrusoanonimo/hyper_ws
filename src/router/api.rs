@@ -20,20 +20,14 @@ pub async fn router(
     match (req.method.as_str(), url) {
         ("GET", ROOT) => Ok(Response::builder()
             .body(Body::from(
-                "a"
-                // modules.db.lock().await.get_by_name("Alice").unwrap(),
+                "a", // modules.db.lock().await.get_by_name("Alice").unwrap(),
             ))
             .unwrap()),
         (_, "/echo") => {
             let body_data = req.take_body().await.unwrap_or_else(|| vec![]);
             Ok(Response::builder().body(Body::from(body_data)).unwrap())
         }
-        ("GET", "/count") => {
-            let mut count = modules.c.lock().await;
-            *count += 1;
-            let visites = *count;
-            drop(count);
-
+        ("GET", "/flag") => {
             let ip = req.xtra().await.remote_addr.ip();
 
             dbg!(ip);
@@ -44,12 +38,10 @@ pub async fn router(
                 .await
                 .or(Err(AppError::SERVER_ERROR))?;
 
-            let r = serde_json::from_str::<model::IpInfo>(&response).ok();
-            println!("{}", response);
-            dbg!(r);
+            if let Ok(info) = serde_json::from_str::<model::ip_info::DataFromIp>(&response) {}
 
             Ok(Response::builder()
-                .body(Body::from(format!("TOTAL_VISITES={visites}")))
+                .body(Body::from(format!("TOTAL_VISITES={}",modules.ip_info.lock().await.len()?)))
                 .unwrap())
         }
         _ if check_route(url, SUB) => {
@@ -58,11 +50,11 @@ pub async fn router(
             Ok(Response::builder().body(Body::from("a")).unwrap())
         }
         ("POST", "/upload") => {
-            let name_uncheked = subroute_args(url).next().ok_or(AppError::StatusCode(400))?;
+            let name_uncheked = subroute_args(url).next().ok_or(AppError::BAD_REQUEST)?;
 
             let name = Path::new(&name_uncheked)
                 .file_name()
-                .ok_or(AppError::StatusCode(400))?;
+                .ok_or(AppError::BAD_REQUEST)?;
             let mut path = PathBuf::from("public/uploads");
 
             path.push(&name);
@@ -75,6 +67,6 @@ pub async fn router(
             Ok(Response::builder().body(Body::from(url)).unwrap())
         }
 
-        _ => Err(AppError::StatusCode(404)),
+        _ => Err(AppError::NOT_FOUND),
     }
 }
