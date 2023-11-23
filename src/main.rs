@@ -79,8 +79,6 @@ async fn main() {
 
     let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
 
-    let a=|| 3;
-    {}
 
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));

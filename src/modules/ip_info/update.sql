@@ -1,0 +1,1 @@
+UPDATE IP_INFO SET city = :city, region = :region, country = :country, loc = :loc, org = :org, postal = :postal, timezone = :timezone, visites = :visites WHERE ip = :ip;

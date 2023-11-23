@@ -27,10 +27,9 @@ pub async fn router(
             let body_data = req.take_body().await.unwrap_or_else(|| vec![]);
             Ok(Response::builder().body(Body::from(body_data)).unwrap())
         }
-        ("GET", "/flag") => {
+        ("GET", "/ip_log") => {
             let ip = req.xtra().await.remote_addr.ip();
 
-            dbg!(ip);
             let response = reqwest::get(format!("https://ipinfo.io/{}/json", ip))
                 .await
                 .or(Err(AppError::SERVER_ERROR))?
@@ -41,7 +40,7 @@ pub async fn router(
             if let Ok(info) = serde_json::from_str::<model::ip_info::DataFromIp>(&response) {}
 
             Ok(Response::builder()
-                .body(Body::from(format!("TOTAL_VISITES={}",modules.ip_info.lock().await.len()?)))
+                .body(Body::from(format!("TOTAL_VISITES=")))
                 .unwrap())
         }
         _ if check_route(url, SUB) => {

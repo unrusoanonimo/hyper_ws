@@ -1,8 +1,32 @@
+use std::collections::HashMap;
+
 use sqlite::{Connection, Statement};
 
-use crate::model;
+use crate::model::{self, ip_info::DataFromIp};
 
 use super::{Error, Result};
+
+pub trait Api {
+    fn register_visit(&mut self, data: DataFromIp) -> Result<HashMap<String, u64>>;
+}
+impl<'a> Api for IpInfoModule<'a> {
+    fn register_visit(&mut self, data: DataFromIp) -> Result<HashMap<String, u64>> {
+        match self.get_by_ip(&data.ip) {
+            Ok(mut v) => {
+                v.visites += 1;
+                self.update(&v)?;
+            }
+            Err(e) => match e {
+                Error::InvalidOperation => {
+                    self.insert(&model::IpInfo { data, visites: 1 })?;
+                }
+                e => Err(e)?,
+            },
+        }
+        
+        todo!()
+    }
+}
 
 pub struct IpInfoModule<'a> {
     connection: Connection,
@@ -12,10 +36,12 @@ impl<'a> IpInfoModule<'a> {
     pub fn new() -> Self {
         let connection: sqlite::Connection = sqlite::open("data/ip_info.sqlite").unwrap();
 
-        connection.iterate("SELECT * FROM IP_INFO", |p| {
-            dbg!(p);
-            true
-        }).unwrap();
+        connection
+            .iterate("SELECT * FROM IP_INFO", |p| {
+                dbg!(p);
+                true
+            })
+            .unwrap();
 
         let module: IpInfoModule = Self {
             connection,
@@ -57,7 +83,8 @@ impl<'a> IpInfoModule<'a> {
         };
         Ok(info)
     }
-    pub fn exists_ip(&mut self, ip: &str) -> Result<bool> {
+
+    fn exists_ip(&mut self, ip: &str) -> Result<bool> {
         let statement = &mut self.stmts.as_mut().unwrap().exists_ip;
         statement.reset()?;
         statement.bind((":ip", ip))?;
@@ -68,7 +95,7 @@ impl<'a> IpInfoModule<'a> {
         Ok(n > 0)
     }
 
-    pub fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
+    fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
         let statement = &mut self.stmts.as_mut().unwrap().get_by_ip;
         statement.reset()?;
         statement.bind((":ip", ip))?;
@@ -78,7 +105,7 @@ impl<'a> IpInfoModule<'a> {
         Self::parse_row(statement)
     }
 
-    pub fn insert(&mut self, info: &model::IpInfo) -> Result<()> {
+    fn insert(&mut self, info: &model::IpInfo) -> Result<()> {
         let statement = &mut self.stmts.as_mut().unwrap().insert;
         statement.reset()?;
 
@@ -97,7 +124,7 @@ impl<'a> IpInfoModule<'a> {
         Ok(())
     }
 
-    pub fn len(&mut self) -> Result<u64> {
+    fn len(&mut self) -> Result<u64> {
         let statement = &mut self.stmts.as_mut().unwrap().len;
         statement.reset()?;
 
@@ -105,6 +132,25 @@ impl<'a> IpInfoModule<'a> {
         let len: i64 = statement.read("len")?;
 
         Ok(len as u64)
+    }
+
+    fn update(&mut self, info: &model::IpInfo) -> Result<()> {
+        let statement = &mut self.stmts.as_mut().unwrap().insert;
+        statement.reset()?;
+
+        statement.bind((":city", info.city.as_str()))?;
+        statement.bind((":region", info.region.as_str()))?;
+        statement.bind((":country", info.country.as_str()))?;
+        statement.bind((":loc", info.loc.as_str()))?;
+        statement.bind((":org", info.org.as_ref().map(|v| v.as_str())))?;
+        statement.bind((":postal", info.postal.as_str()))?;
+        statement.bind((":timezone", info.timezone.as_str()))?;
+        statement.bind((":visites", info.visites as i64))?;
+        statement.bind((":ip", info.ip.as_str()))?;
+
+        statement.next().or(Err(Error::InvalidOperation))?;
+
+        Ok(())
     }
 }
 unsafe impl<'a> Send for IpInfoModule<'a> {}
@@ -114,6 +160,7 @@ struct Statements<'a> {
     pub get_by_ip: Statement<'a>,
     pub len: Statement<'a>,
     pub exists_ip: Statement<'a>,
+    pub update: Statement<'a>,
 }
 
 impl<'a> Statements<'a> {
@@ -124,12 +171,14 @@ impl<'a> Statements<'a> {
         let get_by_ip = con.prepare(include_str!("get_by_ip.sql")).unwrap();
         let len = con.prepare(include_str!("len.sql")).unwrap();
         let exists_ip = con.prepare(include_str!("exists_ip.sql")).unwrap();
+        let update = con.prepare(include_str!("update.sql")).unwrap();
 
         return Self {
             insert,
             get_by_ip,
             len,
             exists_ip,
+            update,
         };
     }
 }
