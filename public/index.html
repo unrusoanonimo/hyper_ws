@@ -1,45 +1,17 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 
 <head>
-	<meta charset='utf-8'>
-	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
-	<title>Page Title</title>
-	<meta name='viewport' content='width=device-width, initial-scale=1'>
-	<!-- <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
-	<script src='main.js'></script> -->
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  <script type="module" crossorigin src="/assets/index-34XtsRNp.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-t8oYwn8B.css">
 </head>
 
 <body>
-	<h1>PLACEHOLDER</h1>
-	<input type="file" name="file" id="file">
-	<button onclick="send()">SEND</button>
-	<div id="paths"></div>
-	<button onclick="window.close()">close</button>
-	<script>
-		function file() {
-			return document.getElementById("file").files[0]
-		}
-		function upload(name) {
-			return fetch("/api/upload/" + name, {
-				method: "POST",
-				body: file(),
-			}).then(v => v.text())
-		}
-		async function send() {
-
-			const container = document.getElementById("paths");
-
-			let line = document.createElement("p");
-			let file_name = document.getElementById("file").files[0].name;
-			const path = await upload(file_name);
-
-			line.innerHTML = `<a href="${path}">${file_name}</a>`;
-			container.appendChild(line)
-		}
-
-		const test = (name) => upload(name).then(v => console.log(v))
-	</script>
+    <div id="app"></div>
 </body>
 
 </html>
