@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use tokio::sync::Mutex;
 
-mod ip_info;
+pub mod ip_info;
 pub use ip_info::IpInfoModule;
 
 pub struct AppModules<'a> {
@@ -22,6 +22,7 @@ impl<'a> AppModules<'a> {
 pub enum Error {
     DbError(sqlite::Error),
     InvalidOperation,
+    InvalidInput,
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,0 +1,1 @@
+SELECT ip, city, region, country, loc, org, postal, timezone, visites FROM IP_INFO

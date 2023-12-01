@@ -1,21 +1,32 @@
-use std::ops::{Deref, DerefMut};
-
+use optfield::optfield;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[optfield(pub PartialIpInfo, rewrap, attrs, merge_fn = pub merge, from )]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct IpInfo {
     pub visites: u64,
-    pub data: DataFromIp,
+    pub ip: String,
+    pub city: String,
+    pub region: String,
+    pub country: String,
+    pub loc: String,
+    pub org: Option<String>,
+    pub postal: String,
+    pub timezone: String,
 }
-impl Deref for IpInfo {
-    type Target = DataFromIp;
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-impl DerefMut for IpInfo {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
+impl From<DataFromIp> for IpInfo {
+    fn from(value: DataFromIp) -> Self {
+        Self {
+            visites: 1,
+            ip: value.ip,
+            city: value.city,
+            region: value.region,
+            country: value.country,
+            loc: value.loc,
+            org: value.org,
+            postal: value.postal,
+            timezone: value.timezone,
+        }
     }
 }
 

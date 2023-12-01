@@ -1,16 +1,25 @@
 use std::collections::HashMap;
 
-use sqlite::{Connection, Statement};
+use ip_info::IpInfo;
+use sqlite::{Connection, State, Statement};
 
-use crate::model::{self, ip_info::DataFromIp};
+use crate::{
+    model::{
+        self,
+        ip_info::{self, DataFromIp, PartialIpInfo},
+    },
+    util::count_map,
+};
 
 use super::{Error, Result};
 
 pub trait Api {
-    fn register_visit(&mut self, data: DataFromIp) -> Result<HashMap<String, u64>>;
+    fn register_visit(&mut self, data: DataFromIp) -> Result<()>;
+    fn get_flags(&mut self) -> Result<HashMap<String, usize>>;
+    fn update(&mut self, info: ip_info::PartialIpInfo) -> Result<model::IpInfo>;
 }
 impl<'a> Api for IpInfoModule<'a> {
-    fn register_visit(&mut self, data: DataFromIp) -> Result<HashMap<String, u64>> {
+    fn register_visit(&mut self, data: DataFromIp) -> Result<()> {
         match self.get_by_ip(&data.ip) {
             Ok(mut v) => {
                 v.visites += 1;
@@ -18,13 +27,22 @@ impl<'a> Api for IpInfoModule<'a> {
             }
             Err(e) => match e {
                 Error::InvalidOperation => {
-                    self.insert(&model::IpInfo { data, visites: 1 })?;
+                    self.insert(&data.into())?;
                 }
                 e => Err(e)?,
             },
         }
-        
-        todo!()
+        Ok(())
+    }
+    fn get_flags(&mut self) -> Result<HashMap<String, usize>> {
+        Ok(count_map(self.get_all()?.into_iter().map(|v| v.country)))
+    }
+    fn update(&mut self, info: PartialIpInfo) -> Result<IpInfo> {
+        let ip = info.ip.as_ref().ok_or(Error::InvalidInput)?;
+        let mut base = self.get_by_ip(ip)?;
+        base.merge(info);
+        self.update(&base)?;
+        Ok(base)
     }
 }
 
@@ -35,14 +53,7 @@ pub struct IpInfoModule<'a> {
 impl<'a> IpInfoModule<'a> {
     pub fn new() -> Self {
         let connection: sqlite::Connection = sqlite::open("data/ip_info.sqlite").unwrap();
-
-        connection
-            .iterate("SELECT * FROM IP_INFO", |p| {
-                dbg!(p);
-                true
-            })
-            .unwrap();
-
+        
         let module: IpInfoModule = Self {
             connection,
             stmts: None,
@@ -69,16 +80,14 @@ impl<'a> IpInfoModule<'a> {
         let visites: i64 = statement.read("visites")?;
 
         let info = model::IpInfo {
-            data: model::ip_info::DataFromIp {
-                city,
-                country,
-                ip,
-                loc,
-                postal,
-                region,
-                timezone,
-                org,
-            },
+            city,
+            country,
+            ip,
+            loc,
+            postal,
+            region,
+            timezone,
+            org,
             visites: visites as u64,
         };
         Ok(info)
@@ -152,11 +161,24 @@ impl<'a> IpInfoModule<'a> {
 
         Ok(())
     }
+
+    fn get_all(&mut self) -> Result<Vec<model::IpInfo>> {
+        let statement = &mut self.stmts.as_mut().unwrap().get_all;
+        statement.reset()?;
+
+        let mut r = vec![];
+        while let Ok(State::Row) = statement.next() {
+            r.push(Self::parse_row(statement)?);
+        }
+
+        Ok(r)
+    }
 }
 unsafe impl<'a> Send for IpInfoModule<'a> {}
 
 struct Statements<'a> {
     pub insert: Statement<'a>,
+    pub get_all: Statement<'a>,
     pub get_by_ip: Statement<'a>,
     pub len: Statement<'a>,
     pub exists_ip: Statement<'a>,
@@ -168,6 +190,7 @@ impl<'a> Statements<'a> {
         con.execute(include_str!("init.sql")).unwrap();
 
         let insert: Statement<'a> = con.prepare(include_str!("insert.sql")).unwrap();
+        let get_all = con.prepare(include_str!("get_all.sql")).unwrap();
         let get_by_ip = con.prepare(include_str!("get_by_ip.sql")).unwrap();
         let len = con.prepare(include_str!("len.sql")).unwrap();
         let exists_ip = con.prepare(include_str!("exists_ip.sql")).unwrap();
@@ -175,6 +198,7 @@ impl<'a> Statements<'a> {
 
         return Self {
             insert,
+            get_all,
             get_by_ip,
             len,
             exists_ip,

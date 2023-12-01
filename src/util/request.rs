@@ -23,16 +23,7 @@ impl PreparedResponse {
         self.builder.body(self.body)
     }
 }
-pub fn get_extension(file: &str) -> Option<&str> {
-    let mut chars = file.chars();
 
-    let mut poss = 1;
-
-    while chars.next_back()? != '.' {
-        poss += 1;
-    }
-    Some(&file[file.len() - poss..])
-}
 #[derive(Debug)]
 
 pub struct ExtendedReqXtraData {
@@ -134,7 +125,7 @@ impl DerefMut for ExtendedRequest {
         &mut self.parts
     }
 }
-pub async fn read_body(body: Body) -> Result<Vec<u8>, hyper::Error> {
+async fn read_body(body: Body) -> Result<Vec<u8>, hyper::Error> {
     body.try_fold(Vec::new(), |mut data, chunk| async move {
         data.extend_from_slice(&chunk);
         Ok(data)

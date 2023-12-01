@@ -12,6 +12,7 @@ use std::fs::File;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use util::unsafe_utils::Sendable;
 use util::{ExtendedReqXtraData, ExtendedRequest};
 
 use crate::router::send_file;
@@ -27,6 +28,7 @@ mod util;
 pub enum AppError {
     StatusCode(u16),
     Dev(&'static str),
+    Generic(Sendable<Box<dyn Error>>),
 }
 impl AppError {
     pub const SERVER_ERROR: Self = AppError::StatusCode(500);
@@ -44,7 +46,36 @@ impl From<modules::Error> for AppError {
     fn from(value: modules::Error) -> Self {
         match value {
             modules::Error::DbError(_) => Self::SERVER_ERROR,
+            modules::Error::InvalidInput => Self::BAD_REQUEST,
             modules::Error::InvalidOperation => Self::BAD_REQUEST,
+        }
+    }
+}
+impl From<Box<dyn Error>> for AppError {
+    fn from(value: Box<dyn Error>) -> Self {
+        AppError::Generic(Sendable(value))
+    }
+}
+impl Into<Response<Body>> for AppError {
+    fn into(self) -> Response<Body> {
+        fn status_code(code: u16) -> Option<Response<Body>> {
+            let file = File::open(format!("assets/error/{}.html", code)).ok()?;
+            let prep = send_file(file).ok()?;
+            prep.builder
+                .header("Content-Type", "text/html")
+                .body(prep.body)
+                .ok()
+        }
+        match self {
+            AppError::StatusCode(code) => status_code(code).unwrap_or(Response::new(Body::empty())),
+            AppError::Dev(msg) => {
+                log::error!("{}", msg);
+                AppError::SERVER_ERROR.into()
+            }
+            AppError::Generic(e) => {
+                log::error!("{:?}", &**e);
+                AppError::SERVER_ERROR.into()
+            }
         }
     }
 }
@@ -53,21 +84,10 @@ async fn handle(
     req: ExtendedRequest,
     modules: ModulesSendable<'_>,
 ) -> Result<Response<Body>, Infallible> {
-    fn status_code(code: u16) -> Option<Response<Body>> {
-        let file = File::open(format!("assets/error/{}.html", code)).ok()?;
-        let prep = send_file(file).ok()?;
-        prep.builder
-            .header("Content-Type", "text/html")
-            .body(prep.body)
-            .ok()
-    }
     let res = router::main_router(req, modules).await;
     Ok(match res {
         Ok(r) => r,
-        Err(e) => match e {
-            AppError::StatusCode(code) => status_code(code).unwrap_or(Response::new(Body::empty())),
-            AppError::Dev(msg) => panic!("{}", msg),
-        },
+        Err(e) => e.into(),
     })
 }
 
@@ -78,7 +98,6 @@ async fn main() {
     logger::setup();
 
     let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
-
 
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));

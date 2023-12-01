@@ -7,7 +7,9 @@ use std::{
 use http::Response;
 use hyper::Body;
 
-use crate::{model, AppError, ExtendedRequest, ModulesSendable};
+use crate::{
+    model::ip_info::DataFromIp, modules::ip_info::Api, AppError, ExtendedRequest, ModulesSendable,
+};
 
 use super::{check_route, subroute_args, ROOT};
 
@@ -37,10 +39,15 @@ pub async fn router(
                 .await
                 .or(Err(AppError::SERVER_ERROR))?;
 
-            if let Ok(info) = serde_json::from_str::<model::ip_info::DataFromIp>(&response) {}
-
+            let info =
+                serde_json::from_str::<DataFromIp>(&response).or(Err(AppError::BAD_REQUEST))?;
+            modules.ip_info.lock().await.register_visit(info)?;
+            let flags = modules.ip_info.lock().await.get_flags()?;
             Ok(Response::builder()
-                .body(Body::from(format!("TOTAL_VISITES=")))
+                
+                .body(Body::from(
+                    serde_json::to_string(&flags).or(Err(AppError::SERVER_ERROR))?,
+                ))
                 .unwrap())
         }
         _ if check_route(url, SUB) => {
