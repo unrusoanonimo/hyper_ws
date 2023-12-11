@@ -11,15 +11,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
 
-
 mod config;
 mod logger;
 mod model;
 mod modules;
 mod router;
 mod util;
-
-
 
 async fn handle(
     req: ExtendedRequest,
@@ -28,7 +25,9 @@ async fn handle(
     let res = router::main_router(req, modules).await;
     Ok(match res {
         Ok(r) => r,
-        Err(e) => e.into(),
+        Err(e) => {
+            log::error!("{}",e);
+            e.into()},
     })
 }
 

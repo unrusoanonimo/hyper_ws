@@ -1,18 +1,21 @@
 use hyper::{Body, Response};
+use std::borrow::Cow;
 use std::error::Error;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::fs::File;
 
 use crate::modules;
 use crate::router::send_file;
 
-use super::unsafe_utils::Sendable;
+pub trait OrServerError<T> {
+    fn or_svr_err(self) -> Result<T, AppError>;
+}
 
 #[derive(Debug)]
 pub enum AppError {
     StatusCode(u16),
     Dev(&'static str),
-    Generic(Sendable<Box<dyn Error>>),
+    Generic(String),
 }
 impl AppError {
     pub const SERVER_ERROR: Self = AppError::StatusCode(500);
@@ -22,7 +25,12 @@ impl AppError {
 }
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PETOU")
+        let details: Cow<'_, str> = match self {
+            AppError::Dev(v) => Cow::Borrowed(v),
+            AppError::StatusCode(s) => Cow::Owned(format!("status ({})", s)),
+            AppError::Generic(s) => Cow::Borrowed(s),
+        };
+        write!(f, "AppError: {:?}", details)
     }
 }
 impl Error for AppError {}
@@ -35,26 +43,13 @@ impl From<modules::Error> for AppError {
         }
     }
 }
-impl From<std::io::Error> for AppError {
-    fn from(value: std::io::Error) -> Self {
-        AppError::Generic(Sendable(Box::new(value)))
-    }
-}
+
 impl From<http::Error> for AppError {
     fn from(value: http::Error) -> Self {
-        AppError::Generic(Sendable(Box::new(value)))
+        AppError::Generic(value.to_string())
     }
 }
-impl From<Box<dyn Error>> for AppError {
-    fn from(value: Box<dyn Error>) -> Self {
-        AppError::Generic(Sendable(value))
-    }
-}
-impl From<reqwest::Error> for AppError {
-    fn from(value: reqwest::Error) -> Self {
-        AppError::Generic(Sendable(Box::new(value)))
-    }
-}
+
 impl Into<Response<Body>> for AppError {
     fn into(self) -> Response<Body> {
         fn status_code(code: u16) -> Option<Response<Body>> {
@@ -71,10 +66,21 @@ impl Into<Response<Body>> for AppError {
                 log::error!("{}", msg);
                 AppError::SERVER_ERROR.into()
             }
-            AppError::Generic(e) => {
-                log::error!("{:?}", &**e);
+            AppError::Generic(msg) => {
+                log::error!("{}", msg);
                 AppError::SERVER_ERROR.into()
             }
         }
+    }
+}
+
+impl<T> OrServerError<T> for Option<T> {
+    fn or_svr_err(self) -> Result<T, AppError> {
+        self.ok_or(AppError::Dev("Unexpected None"))
+    }
+}
+impl<T, E: Error> OrServerError<T> for Result<T, E> {
+    fn or_svr_err(self) -> Result<T, AppError> {
+        self.map_err(|e| AppError::Generic(e.to_string()))
     }
 }

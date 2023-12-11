@@ -8,7 +8,9 @@ use http::Response;
 use hyper::Body;
 
 use crate::{
-    model::ip_info::DataFromIp, modules::ip_info::Api, util::{XtendedResBuilder, AppError},
+    model::ip_info::DataFromIp,
+    modules::ip_info::Api,
+    util::{errors::OrServerError, AppError, XtendedResBuilder},
     ExtendedRequest, ModulesSendable,
 };
 
@@ -28,20 +30,25 @@ pub async fn router(
         }
         ("GET", "/ip_log") => {
             let ip = req.xtra().await.remote_addr.ip();
+            log::info!("{}",ip);
 
             let response = reqwest::get(format!("https://ipinfo.io/{}/json", ip))
                 .await
-                ?
+                .or_svr_err()?
                 .text()
-                .await?;
+                .await
+                .or_svr_err()?;
+
 
             let info =
                 serde_json::from_str::<DataFromIp>(&response).or(Err(AppError::BAD_REQUEST))?;
             modules.ip_info.lock().await.register_visit(info)?;
+
             let flags = modules.ip_info.lock().await.get_flags()?;
             Response::builder()
                 .json(&flags)
                 .or(Err(AppError::SERVER_ERROR))
+
         }
         _ if check_route(url, SUB) => {
             let a: Box<[_]> = subroute_args(url).collect();
@@ -59,8 +66,9 @@ pub async fn router(
             let mut path = PathBuf::from("public/uploads");
 
             path.push(&name);
-            let mut file = File::create(path)?;
-            file.write_all(req.read_body().await.ok_or(AppError::SERVER_ERROR)?)?;
+            let mut file = File::create(path).or_svr_err()?;
+            file.write_all(req.read_body().await.ok_or(AppError::SERVER_ERROR)?)
+                .or_svr_err()?;
 
             let mut url = "/uploads/".to_string();
             url += &name.to_string_lossy();
