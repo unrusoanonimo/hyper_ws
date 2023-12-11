@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    util::{get_extension, PreparedResponse},
-    AppError, ExtendedRequest, ModulesSendable,
+    util::{get_extension, AppError, PreparedResponse},
+    ExtendedRequest, ModulesSendable,
 };
 
 use hyper::{Body, Response};

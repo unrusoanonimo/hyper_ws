@@ -8,7 +8,7 @@ use http::Response;
 use hyper::Body;
 
 use crate::{
-    model::ip_info::DataFromIp, modules::ip_info::Api, util::XtendedResBuilder, AppError,
+    model::ip_info::DataFromIp, modules::ip_info::Api, util::{XtendedResBuilder, AppError},
     ExtendedRequest, ModulesSendable,
 };
 
