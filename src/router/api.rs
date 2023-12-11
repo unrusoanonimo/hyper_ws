@@ -30,7 +30,6 @@ pub async fn router(
         }
         ("GET", "/ip_log") => {
             let ip = req.xtra().await.remote_addr.ip();
-            log::info!("{}",ip);
 
             let response = reqwest::get(format!("https://ipinfo.io/{}/json", ip))
                 .await
@@ -38,7 +37,6 @@ pub async fn router(
                 .text()
                 .await
                 .or_svr_err()?;
-
 
             let info =
                 serde_json::from_str::<DataFromIp>(&response).or(Err(AppError::BAD_REQUEST))?;
@@ -48,7 +46,6 @@ pub async fn router(
             Response::builder()
                 .json(&flags)
                 .or(Err(AppError::SERVER_ERROR))
-
         }
         _ if check_route(url, SUB) => {
             let a: Box<[_]> = subroute_args(url).collect();

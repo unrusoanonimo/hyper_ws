@@ -39,6 +39,7 @@ async fn main() {
 
     let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
 
+    dbg!(modules.clone().ip_info.lock().await.get_by_ip(""));
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 

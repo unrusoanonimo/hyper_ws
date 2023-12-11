@@ -53,7 +53,7 @@ pub struct IpInfoModule<'a> {
 impl<'a> IpInfoModule<'a> {
     pub fn new() -> Self {
         let connection: sqlite::Connection = sqlite::open("data/ip_info.sqlite").unwrap();
-        
+
         let module: IpInfoModule = Self {
             connection,
             stmts: None,
@@ -69,6 +69,7 @@ impl<'a> IpInfoModule<'a> {
     }
 
     fn parse_row(statement: &mut Statement) -> Result<model::IpInfo> {
+
         let ip: String = statement.read("ip")?;
         let city: String = statement.read("city")?;
         let region: String = statement.read("region")?;
@@ -98,19 +99,22 @@ impl<'a> IpInfoModule<'a> {
         statement.reset()?;
         statement.bind((":ip", ip))?;
 
-        statement.next().or(Err(Error::InvalidOperation))?;
+        if statement.next()? == State::Done {
+            return Err(Error::InvalidOperation);
+        }
 
         let n: i64 = statement.read("exists")?;
         Ok(n > 0)
     }
 
-    fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
+    pub fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
         let statement = &mut self.stmts.as_mut().unwrap().get_by_ip;
         statement.reset()?;
         statement.bind((":ip", ip))?;
 
-        statement.next().or(Err(Error::InvalidOperation))?;
-
+        if statement.next()? == State::Done {
+            return Err(Error::InvalidOperation);
+        }
         Self::parse_row(statement)
     }
 
@@ -128,7 +132,9 @@ impl<'a> IpInfoModule<'a> {
         statement.bind((":timezone", info.timezone.as_str()))?;
         statement.bind((":visites", info.visites as i64))?;
 
-        statement.next().or(Err(Error::InvalidOperation))?;
+        if statement.next()? == State::Done {
+            return Err(Error::InvalidOperation);
+        }
 
         Ok(())
     }
@@ -137,7 +143,10 @@ impl<'a> IpInfoModule<'a> {
         let statement = &mut self.stmts.as_mut().unwrap().len;
         statement.reset()?;
 
-        statement.next().or(Err(Error::InvalidOperation))?;
+        
+        if statement.next()? == State::Done {
+            return Err(Error::InvalidOperation);
+        }
         let len: i64 = statement.read("len")?;
 
         Ok(len as u64)
@@ -157,7 +166,9 @@ impl<'a> IpInfoModule<'a> {
         statement.bind((":visites", info.visites as i64))?;
         statement.bind((":ip", info.ip.as_str()))?;
 
-        statement.next().or(Err(Error::InvalidOperation))?;
+        if statement.next()? == State::Done {
+            return Err(Error::InvalidOperation);
+        }
 
         Ok(())
     }

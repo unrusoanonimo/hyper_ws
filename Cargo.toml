@@ -25,6 +25,7 @@ sqlite = "0.32.0"
 rand = "0.8.5"
 reqwest = "0.11.22"
 optfield = "0.3.0"
+impl_new = "0.2.1"
 
 [dependencies.uuid]
 version = "1.5.0"

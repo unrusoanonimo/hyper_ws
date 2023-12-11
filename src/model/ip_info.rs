@@ -2,7 +2,7 @@ use optfield::optfield;
 use serde::{Deserialize, Serialize};
 
 #[optfield(pub PartialIpInfo, rewrap, attrs, merge_fn = pub merge, from )]
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, impl_new::New)]
 pub struct IpInfo {
     pub visites: u64,
     pub ip: String,
@@ -30,7 +30,7 @@ impl From<DataFromIp> for IpInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, impl_new::New)]
 pub struct DataFromIp {
     pub ip: String,
     pub city: String,
