@@ -51,9 +51,24 @@ impl From<modules::Error> for AppError {
         }
     }
 }
+impl From<std::io::Error> for AppError {
+    fn from(value: std::io::Error) -> Self {
+        AppError::Generic(Sendable(Box::new(value)))
+    }
+}
+impl From<http::Error> for AppError {
+    fn from(value: http::Error) -> Self {
+        AppError::Generic(Sendable(Box::new(value)))
+    }
+}
 impl From<Box<dyn Error>> for AppError {
     fn from(value: Box<dyn Error>) -> Self {
         AppError::Generic(Sendable(value))
+    }
+}
+impl From<reqwest::Error> for AppError {
+    fn from(value: reqwest::Error) -> Self {
+        AppError::Generic(Sendable(Box::new(value)))
     }
 }
 impl Into<Response<Body>> for AppError {
@@ -79,6 +94,7 @@ impl Into<Response<Body>> for AppError {
         }
     }
 }
+
 
 async fn handle(
     req: ExtendedRequest,

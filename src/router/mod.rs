@@ -65,14 +65,13 @@ pub fn send_file(mut file: File) -> Result<PreparedResponse, io::Error> {
     let builder = Response::builder().header("Content-Length", len);
     Ok(PreparedResponse::new(body, builder))
 }
-pub fn redirect(path: &str, status: u16) -> Response<Body> {
+pub fn redirect(path: &str, status: u16) -> Result<Response<Body>, AppError> {
     debug_assert!((300..400).contains(&status));
 
-    Response::builder()
+    Ok(Response::builder()
         .status(status)
         .header("Location", path)
-        .body(Body::empty())
-        .unwrap()
+        .body(Body::empty())?)
 }
 
 pub fn check_route(url: &str, route: &str) -> bool {
@@ -100,7 +99,7 @@ pub async fn main_router(
     match (req.method.as_str(), url) {
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
         _ if check_route(url, API) => api::router(req, &url[API.len()..], modules).await,
-        ("GET", "/redirect") => Ok(redirect("/", 301)),
+        ("GET", "/redirect") => redirect("/", 301),
         ("GET", _) => public_path(req, url).ok_or(AppError::StatusCode(404)),
         _ => Err(AppError::StatusCode(404)),
     }

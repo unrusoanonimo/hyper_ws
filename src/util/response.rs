@@ -1,6 +1,5 @@
 use http::{Response, response};
 use hyper::Body;
-use reqwest::RequestBuilder;
 use serde::Serialize;
 
 pub trait XtendedResBuilder {
