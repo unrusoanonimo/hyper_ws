@@ -18,7 +18,7 @@ pub trait Api {
     fn get_flags(&mut self) -> Result<HashMap<String, usize>>;
     fn update(&mut self, info: ip_info::PartialIpInfo) -> Result<model::IpInfo>;
 }
-impl<'a> Api for IpInfoModule<'a> {
+impl Api for IpInfoModule {
     fn register_visit(&mut self, data: DataFromIp) -> Result<()> {
         match self.get_by_ip(&data.ip) {
             Ok(mut v) => {
@@ -46,30 +46,17 @@ impl<'a> Api for IpInfoModule<'a> {
     }
 }
 
-pub struct IpInfoModule<'a> {
+pub struct IpInfoModule {
     connection: Connection,
-    stmts: Option<Statements<'a>>,
 }
-impl<'a> IpInfoModule<'a> {
+impl IpInfoModule {
     pub fn new() -> Self {
         let connection: sqlite::Connection = sqlite::open("data/ip_info.sqlite").unwrap();
 
-        let module: IpInfoModule = Self {
-            connection,
-            stmts: None,
-        };
-        module.build();
-
-        module
-    }
-    fn build(&'a self) {
-        let uncheked = unsafe { (self as *const _ as *mut Self).as_mut().unwrap() };
-        let st = Statements::new(&self.connection);
-        uncheked.stmts = Some(st);
+        Self { connection }
     }
 
     fn parse_row(statement: &mut Statement) -> Result<model::IpInfo> {
-
         let ip: String = statement.read("ip")?;
         let city: String = statement.read("city")?;
         let region: String = statement.read("region")?;
@@ -95,7 +82,7 @@ impl<'a> IpInfoModule<'a> {
     }
 
     fn exists_ip(&mut self, ip: &str) -> Result<bool> {
-        let statement = &mut self.stmts.as_mut().unwrap().exists_ip;
+        let mut statement = Statements::exists_ip(&self.connection);
         statement.reset()?;
         statement.bind((":ip", ip))?;
 
@@ -108,18 +95,18 @@ impl<'a> IpInfoModule<'a> {
     }
 
     pub fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
-        let statement = &mut self.stmts.as_mut().unwrap().get_by_ip;
+        let mut statement = Statements::get_by_ip(&self.connection);
         statement.reset()?;
         statement.bind((":ip", ip))?;
 
         if statement.next()? == State::Done {
             return Err(Error::InvalidOperation);
         }
-        Self::parse_row(statement)
+        Self::parse_row(&mut statement)
     }
 
     fn insert(&mut self, info: &model::IpInfo) -> Result<()> {
-        let statement = &mut self.stmts.as_mut().unwrap().insert;
+        let mut statement = Statements::insert(&self.connection);
         statement.reset()?;
 
         statement.bind((":ip", info.ip.as_str()))?;
@@ -140,10 +127,9 @@ impl<'a> IpInfoModule<'a> {
     }
 
     fn len(&mut self) -> Result<u64> {
-        let statement = &mut self.stmts.as_mut().unwrap().len;
+        let mut statement = Statements::len(&self.connection);
         statement.reset()?;
 
-        
         if statement.next()? == State::Done {
             return Err(Error::InvalidOperation);
         }
@@ -153,7 +139,7 @@ impl<'a> IpInfoModule<'a> {
     }
 
     fn update(&mut self, info: &model::IpInfo) -> Result<()> {
-        let statement = &mut self.stmts.as_mut().unwrap().insert;
+        let mut statement = Statements::update(&self.connection);
         statement.reset()?;
 
         statement.bind((":city", info.city.as_str()))?;
@@ -174,46 +160,43 @@ impl<'a> IpInfoModule<'a> {
     }
 
     fn get_all(&mut self) -> Result<Vec<model::IpInfo>> {
-        let statement = &mut self.stmts.as_mut().unwrap().get_all;
+        let mut statement = Statements::get_all(&self.connection);
         statement.reset()?;
 
         let mut r = vec![];
         while let Ok(State::Row) = statement.next() {
-            r.push(Self::parse_row(statement)?);
+            r.push(Self::parse_row(&mut statement)?);
         }
 
         Ok(r)
     }
 }
-unsafe impl<'a> Send for IpInfoModule<'a> {}
+unsafe impl Send for IpInfoModule {}
 
-struct Statements<'a> {
-    pub insert: Statement<'a>,
-    pub get_all: Statement<'a>,
-    pub get_by_ip: Statement<'a>,
-    pub len: Statement<'a>,
-    pub exists_ip: Statement<'a>,
-    pub update: Statement<'a>,
-}
+struct Statements;
 
-impl<'a> Statements<'a> {
-    pub fn new(con: &'a Connection) -> Statements {
-        con.execute(include_str!("init.sql")).unwrap();
+impl Statements {
+    pub fn insert(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("insert.sql")).unwrap()
+    }
 
-        let insert: Statement<'a> = con.prepare(include_str!("insert.sql")).unwrap();
-        let get_all = con.prepare(include_str!("get_all.sql")).unwrap();
-        let get_by_ip = con.prepare(include_str!("get_by_ip.sql")).unwrap();
-        let len = con.prepare(include_str!("len.sql")).unwrap();
-        let exists_ip = con.prepare(include_str!("exists_ip.sql")).unwrap();
-        let update = con.prepare(include_str!("update.sql")).unwrap();
+    pub fn get_all(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("get_all.sql")).unwrap()
+    }
 
-        return Self {
-            insert,
-            get_all,
-            get_by_ip,
-            len,
-            exists_ip,
-            update,
-        };
+    pub fn get_by_ip(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("get_by_ip.sql")).unwrap()
+    }
+
+    pub fn len(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("len.sql")).unwrap()
+    }
+
+    pub fn exists_ip(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("exists_ip.sql")).unwrap()
+    }
+
+    pub fn update(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("update.sql")).unwrap()
     }
 }

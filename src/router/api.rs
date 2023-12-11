@@ -20,7 +20,7 @@ const SUB: &str = "/sub";
 pub async fn router(
     mut req: ExtendedRequest,
     url: &str,
-    modules: ModulesSendable<'_>,
+    modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     match (req.method.as_str(), url) {
         ("GET", ROOT) => Ok(Response::builder().body(Body::from("a"))?),

@@ -85,7 +85,7 @@ pub fn subroute_args(url: &str) -> std::str::Split<'_, char> {
 async fn todo_router(
     req: ExtendedRequest,
     url: &str,
-    modules: ModulesSendable<'_>,
+    modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     panic!("todo_router is only inteded to be used as placeholder");
 }
@@ -93,7 +93,7 @@ async fn todo_router(
 const API: &str = "/api";
 pub async fn main_router(
     req: ExtendedRequest,
-    modules: ModulesSendable<'_>,
+    modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     let url: &str = &req.clean_url().to_string();
     match (req.method.as_str(), url) {

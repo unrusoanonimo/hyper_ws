@@ -5,12 +5,12 @@ use tokio::sync::Mutex;
 pub mod ip_info;
 pub use ip_info::IpInfoModule;
 
-pub struct AppModules<'a> {
-    pub ip_info: Mutex<IpInfoModule<'a>>,
+pub struct AppModules {
+    pub ip_info: Mutex<IpInfoModule>,
 }
-unsafe impl<'a> Sync for AppModules<'a> {}
+unsafe impl Sync for AppModules {}
 
-impl<'a> AppModules<'a> {
+impl AppModules {
     pub fn new() -> Self {
         Self {
             ip_info: Mutex::new(IpInfoModule::new()),

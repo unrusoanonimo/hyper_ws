@@ -20,26 +20,26 @@ mod util;
 
 async fn handle(
     req: ExtendedRequest,
-    modules: ModulesSendable<'_>,
+    modules: ModulesSendable,
 ) -> Result<Response<Body>, Infallible> {
     let res = router::main_router(req, modules).await;
     Ok(match res {
         Ok(r) => r,
         Err(e) => {
-            log::error!("{}",e);
-            e.into()},
+            log::error!("{}", e);
+            e.into()
+        }
     })
 }
 
-type ModulesSendable<'a> = Arc<AppModules<'a>>;
+type ModulesSendable = Arc<AppModules>;
 
 #[tokio::main]
 async fn main() {
     logger::setup();
 
-    let modules: ModulesSendable<'_> = Arc::new(AppModules::new());
+    let modules: ModulesSendable = Arc::new(AppModules::new());
 
-    dbg!(modules.clone().ip_info.lock().await.get_by_ip(""));
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 
