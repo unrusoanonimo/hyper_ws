@@ -152,14 +152,12 @@ impl IpInfoModule {
         statement.bind((":visites", info.visites as i64))?;
         statement.bind((":ip", info.ip.as_str()))?;
 
-        if statement.next()? == State::Done {
-            return Err(Error::InvalidOperation);
-        }
+        statement.next()?;
 
         Ok(())
     }
 
-    fn get_all(&mut self) -> Result<Vec<model::IpInfo>> {
+    pub fn get_all(&mut self) -> Result<Vec<model::IpInfo>> {
         let mut statement = Statements::get_all(&self.connection);
         statement.reset()?;
 

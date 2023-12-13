@@ -39,7 +39,6 @@ async fn main() {
     logger::setup();
 
     let modules: ModulesSendable = Arc::new(AppModules::new());
-
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 
