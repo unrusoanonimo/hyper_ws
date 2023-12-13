@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    filter::{FilterAction, FILTERS},
     util::{get_extension, AppError, PreparedResponse},
     ExtendedRequest, ModulesSendable,
 };
@@ -54,9 +55,8 @@ pub fn public_path(req: ExtendedRequest, url: &str) -> Option<Response<Body>> {
         .ok()
 }
 
-static MIMEMAP: Lazy<HashMap<&str, &str>> = once_cell::sync::Lazy::new(|| {
-    serde_json::from_str(include_str!("../long_lines/mime.json")).unwrap()
-});
+static MIMEMAP: Lazy<HashMap<&str, &str>> =
+    Lazy::new(|| serde_json::from_str(include_str!("../long_lines/mime.json")).unwrap());
 
 pub fn send_file(mut file: File) -> Result<PreparedResponse, io::Error> {
     let mut data = vec![];
@@ -93,14 +93,30 @@ async fn todo_router(
 const API: &str = "/api";
 pub async fn main_router(
     req: ExtendedRequest,
-    modules: ModulesSendable,
+    mut modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     let url: &str = &req.clean_url().to_string();
-    match (req.method.as_str(), url) {
+
+    // TODO: save modifiers
+    {
+        let mut modifiers = vec![];
+        let a=FILTERS.read().unwrap();
+        for i in a.iter() {
+            match i.filter(&req, &mut modules)? {
+                FilterAction::Modify(f) => {
+                    modifiers.push(f);
+                }
+                FilterAction::Return(res) => return Ok(res),
+                FilterAction::None => (),
+            };
+        }
+    }
+    let result = match (req.method.as_str(), url) {
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
         _ if check_route(url, API) => api::router(req, &url[API.len()..], modules).await,
         ("GET", "/redirect") => redirect("/", 301),
-        ("GET", _) => public_path(req, url).ok_or(AppError::StatusCode(404)),
-        _ => Err(AppError::StatusCode(404)),
-    }
+        ("GET", _) => public_path(req, url).ok_or(AppError::NOT_FOUND),
+        _ => Err(AppError::NOT_FOUND),
+    };
+    result
 }

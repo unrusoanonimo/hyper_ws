@@ -17,6 +17,7 @@ mod model;
 mod modules;
 mod router;
 mod util;
+mod filter;
 
 async fn handle(
     req: ExtendedRequest,
