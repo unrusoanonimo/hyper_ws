@@ -5,12 +5,12 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
+use prerouting_modules::{PreroutingModules, PreroutingResolution};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
-use prerouting_modules::PreRoutingModules;
 
 mod config;
 mod logger;
@@ -22,7 +22,8 @@ mod util;
 
 async fn handle(
     req: ExtendedRequest,
-    modules: ModulesSendable,
+    mut modules: ModulesSendable,
+    prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
     let res = router::main_router(req, modules).await;
     Ok(match res {
@@ -35,13 +36,15 @@ async fn handle(
 }
 
 type ModulesSendable = Arc<AppModules>;
+type PreroutingSendable = Arc<PreroutingModules>;
 
 #[tokio::main]
 async fn main() {
     logger::setup();
 
     let modules: ModulesSendable = Arc::new(AppModules::new());
-    let prerouting=PreRoutingModules::default();
+    let prerouting: PreroutingSendable = Arc::new(PreroutingModules::default());
+
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 
@@ -50,9 +53,14 @@ async fn main() {
     let make_service = make_service_fn(|conn: &AddrStream| {
         let xtra = Arc::new(Mutex::new(ExtendedReqXtraData::new(conn)));
         let module = modules.clone();
+        let prerouting = prerouting.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                handle(ExtendedRequest::new(req, xtra.clone()), Arc::clone(&module))
+                handle(
+                    ExtendedRequest::new(req, xtra.clone()),
+                    Arc::clone(&module),
+                    Arc::clone(&prerouting),
+                )
             }))
         }
     });

@@ -6,6 +6,8 @@ use crate::{
     util::{AppError, ExtendedRequest},
     ModulesSendable,
 };
+
+use super::PreroutingResolution;
 pub enum FilterAction {
     None,
     Return(Response<Body>),
@@ -33,17 +35,17 @@ impl FilterModule {
         &self,
         req: &ExtendedRequest,
         modules: &mut ModulesSendable,
-    ) -> Result<FiltersResolution, AppError> {
+    ) -> Result<PreroutingResolution, AppError> {
         let mut modifiers: Vec<Box<dyn FnOnce(&mut Response<Body>) -> Result<(), AppError>>> =
             vec![];
         for v in self.list.iter() {
             match v.filter(req, modules)? {
                 FilterAction::Modify(f) => modifiers.push(f),
                 FilterAction::None => (),
-                FilterAction::Return(r) => return Ok(FiltersResolution::Return(r)),
+                FilterAction::Return(r) => return Ok(PreroutingResolution::Return(r)),
             };
         }
-        Ok(FiltersResolution::Modify(modifiers))
+        Ok(PreroutingResolution::Modify(modifiers))
     }
 }
 
@@ -51,9 +53,4 @@ impl Default for FilterModule {
     fn default() -> Self {
         Self::new([])
     }
-}
-pub enum FiltersResolution {
-    None,
-    Return(Response<Body>),
-    Modify(Vec<Box<dyn FnOnce(&mut Response<Body>) -> Result<(), AppError>>>),
 }
