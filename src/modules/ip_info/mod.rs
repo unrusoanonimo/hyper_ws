@@ -169,7 +169,6 @@ impl IpInfoModule {
         Ok(r)
     }
 }
-unsafe impl Send for IpInfoModule {}
 
 struct Statements;
 

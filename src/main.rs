@@ -10,14 +10,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
+use prerouting_modules::PreRoutingModules;
 
 mod config;
 mod logger;
 mod model;
 mod modules;
+mod prerouting_modules;
 mod router;
 mod util;
-mod filter;
 
 async fn handle(
     req: ExtendedRequest,
@@ -40,6 +41,7 @@ async fn main() {
     logger::setup();
 
     let modules: ModulesSendable = Arc::new(AppModules::new());
+    let prerouting=PreRoutingModules::default();
     // Construct our SocketAddr to listen on...
     let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
 

@@ -14,3 +14,7 @@ impl<T> DerefMut for Sendable<T> {
         &mut self.0
     }
 }
+
+pub unsafe fn uncheked_mut<T>(r: &T) -> &mut T {
+    (r as *const T as *mut T).as_mut().unwrap()
+}

@@ -5,7 +5,6 @@ use std::{
 };
 
 use crate::{
-    filter::{FilterAction, FILTERS},
     util::{get_extension, AppError, PreparedResponse},
     ExtendedRequest, ModulesSendable,
 };
@@ -93,24 +92,10 @@ async fn todo_router(
 const API: &str = "/api";
 pub async fn main_router(
     req: ExtendedRequest,
-    mut modules: ModulesSendable,
+    modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     let url: &str = &req.clean_url().to_string();
 
-    // TODO: save modifiers
-    {
-        let mut modifiers = vec![];
-        let a=FILTERS.read().unwrap();
-        for i in a.iter() {
-            match i.filter(&req, &mut modules)? {
-                FilterAction::Modify(f) => {
-                    modifiers.push(f);
-                }
-                FilterAction::Return(res) => return Ok(res),
-                FilterAction::None => (),
-            };
-        }
-    }
     let result = match (req.method.as_str(), url) {
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
         _ if check_route(url, API) => api::router(req, &url[API.len()..], modules).await,

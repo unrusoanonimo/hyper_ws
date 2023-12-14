@@ -8,7 +8,6 @@ pub use ip_info::IpInfoModule;
 pub struct AppModules {
     pub ip_info: Mutex<IpInfoModule>,
 }
-unsafe impl Sync for AppModules {}
 
 impl AppModules {
     pub fn new() -> Self {
