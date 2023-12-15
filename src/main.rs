@@ -6,6 +6,7 @@ use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
 use prerouting_modules::PreroutingModules;
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -21,16 +22,17 @@ mod router;
 mod util;
 
 async fn handle(
-    req: ExtendedRequest,
+    mut req: ExtendedRequest,
     modules: ModulesSendable,
     prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
-    let res = router::main_router(req, modules).await;
+    let result: Result<Response<Body>, util::AppError> =
+        router::main_router(&mut req, modules).await;
 
-    Ok(match res {
-        Ok(mut r) => {
-            prerouting.modifiers.call(&mut r);
-            r
+    Ok(match result {
+        Ok(mut res) => {
+            prerouting.modifiers.call(&mut req, &mut res);
+            res
         }
         Err(e) => {
             log::error!("{}", e);

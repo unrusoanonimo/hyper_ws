@@ -2,8 +2,10 @@ use derivative::Derivative;
 use http::Response;
 use hyper::Body;
 
+use crate::util::ExtendedRequest;
+
 pub trait Modifier: Send + Sync + 'static {
-    fn call(&self, res: &mut Response<Body>);
+    fn call(&self, req: &mut ExtendedRequest, res: &mut Response<Body>);
 }
 
 #[derive(Derivative)]
@@ -14,7 +16,7 @@ pub struct ModifierModule {
 }
 
 impl ModifierModule {
-    pub fn new(values: impl Into<Vec<Box<dyn Modifier>>>) -> Self {
+    pub fn new(values: Vec<Box<dyn Modifier>>) -> Self {
         Self {
             values: values.into(),
         }
@@ -22,19 +24,22 @@ impl ModifierModule {
     pub fn add(&mut self, m: impl Modifier) {
         self.values.push(Box::new(m));
     }
-    pub fn call(&self, res: &mut Response<Body>) {
-        self.values.iter().for_each(|m| m.call(res));
+    pub fn call(&self, req: &mut ExtendedRequest, res: &mut Response<Body>) {
+        self.values.iter().for_each(|m| m.call(req, res));
     }
 }
 impl Default for ModifierModule {
     fn default() -> Self {
-        Self::new([])
+        Self::new(vec![Box::new(SesionModifier)])
     }
 }
 
-struct SesionModifier {}
+struct SesionModifier;
+impl SesionModifier {
+    const COOCKIE: &str = "Session-Id";
+}
 impl Modifier for SesionModifier {
-    fn call(&self, res: &mut Response<Body>) {
-        
+    fn call(&self, req: &mut ExtendedRequest, _res: &mut Response<Body>) {
+        req.get_header("cookie").unwrap_or(b"");
     }
 }

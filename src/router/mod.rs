@@ -18,7 +18,7 @@ mod api;
 const ROOT: &str = "";
 const MIME_DEFAULT: &str = "application/octet-stream";
 
-pub fn public_path(req: ExtendedRequest, url: &str) -> Option<Response<Body>> {
+pub fn public_path(req: &mut ExtendedRequest, url: &str) -> Option<Response<Body>> {
     let mut inner_path = "./public".to_string();
     inner_path += url;
     let mut path = PathBuf::from(&inner_path);
@@ -91,7 +91,7 @@ async fn todo_router(
 
 const API: &str = "/api";
 pub async fn main_router(
-    req: ExtendedRequest,
+    req: &mut ExtendedRequest,
     modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
     let url: &str = &req.clean_url().to_string();

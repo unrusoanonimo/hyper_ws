@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    collections::HashMap,
     net::SocketAddr,
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -48,20 +49,39 @@ pub enum BodyType {
 pub struct ExtendedRequest {
     body: BodyType,
     parts: Parts,
+    cookie_map: HashMap<String, String>,
     xtra: Arc<Mutex<ExtendedReqXtraData>>,
 }
 impl ExtendedRequest {
     pub fn new(inner: Request<Body>, xtra: Arc<Mutex<ExtendedReqXtraData>>) -> Self {
         let (parts, body) = inner.into_parts();
 
+        let cookie_map: HashMap<String, String> = parts
+            .headers
+            .get("cookie")
+            .map(|v| {
+                let cookie = String::from_utf8_lossy(v.as_bytes());
+                cookie
+                    .split("; ")
+                    .map(|v| {
+                        let index = v.find("=").unwrap();
+                        (String::from(&v[..index]), String::from(&v[index + 1..]))
+                    })
+                    .collect()
+            })
+            .unwrap_or_else(|| HashMap::new());
         Self {
             parts,
             body: BodyType::Avaible(Some(body)),
+            cookie_map,
             xtra,
         }
     }
+    pub fn get_cookie(&self, cookie: &str) -> Option<&String> {
+        self.cookie_map.get(cookie)
+    }
     pub fn get_header(&self, key: &str) -> Option<&[u8]> {
-        Some(self.headers.get(key)?.as_bytes())
+        self.headers.get(key).map(|v| v.as_bytes())
     }
     pub fn take_header(&mut self, key: &str) -> Option<http::HeaderValue> {
         self.headers.remove(key)
@@ -132,4 +152,3 @@ async fn read_body(body: Body) -> Result<Vec<u8>, hyper::Error> {
     })
     .await
 }
-

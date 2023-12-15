@@ -18,7 +18,7 @@ use super::{check_route, subroute_args, ROOT};
 
 const SUB: &str = "/sub";
 pub async fn router(
-    mut req: ExtendedRequest,
+    req: &mut ExtendedRequest,
     url: &str,
     modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
