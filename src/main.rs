@@ -5,7 +5,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
-use prerouting_modules::{PreroutingModules, PreroutingResolution};
+use prerouting_modules::PreroutingModules;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -22,12 +22,16 @@ mod util;
 
 async fn handle(
     req: ExtendedRequest,
-    mut modules: ModulesSendable,
+    modules: ModulesSendable,
     prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
     let res = router::main_router(req, modules).await;
+
     Ok(match res {
-        Ok(r) => r,
+        Ok(mut r) => {
+            prerouting.modifiers.call(&mut r);
+            r
+        }
         Err(e) => {
             log::error!("{}", e);
             e.into()

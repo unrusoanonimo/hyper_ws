@@ -1,32 +1,8 @@
-use http::Response;
-use hyper::Body;
+use self::modifiers::ModifierModule;
 
-use crate::{
-    util::{AppError, ExtendedRequest},
-    ModulesSendable,
-};
+mod modifiers;
 
-use self::filters::FilterModule;
-
-pub mod filters;
-
-#[derive(Debug, impl_new::New, Default)]
+#[derive(Debug, Default, impl_new::New)]
 pub struct PreroutingModules {
-    pub filter: FilterModule,
-}
-impl PreroutingModules {
-    pub fn evaluate_modules(
-        &self,
-        req: &ExtendedRequest,
-        modules: &mut ModulesSendable,
-    ) -> PreroutingResolution {
-        self.filter
-            .evaluate_filters(req, modules)
-            .unwrap_or_else(|e| PreroutingResolution::Return(e.into()))
-    }
-}
-
-pub enum PreroutingResolution {
-    Return(Response<Body>),
-    Modify(Vec<Box<dyn FnOnce(&mut Response<Body>) -> Result<(), AppError>>>),
+    pub modifiers: ModifierModule,
 }
