@@ -53,10 +53,12 @@ impl IpInfoModule {
     pub fn new() -> Self {
         let connection: sqlite::Connection = sqlite::open("data/ip_info.sqlite").unwrap();
 
+        Statements::init(&connection).next().unwrap();
+
         Self { connection }
     }
 
-    fn parse_row(statement: &mut Statement) -> Result<model::IpInfo> {
+    fn parse_row(statement: &Statement) -> Result<model::IpInfo> {
         let ip: String = statement.read("ip")?;
         let city: String = statement.read("city")?;
         let region: String = statement.read("region")?;
@@ -81,7 +83,7 @@ impl IpInfoModule {
         Ok(info)
     }
 
-    fn exists_ip(&mut self, ip: &str) -> Result<bool> {
+    fn exists_ip(&self, ip: &str) -> Result<bool> {
         let mut statement = Statements::exists_ip(&self.connection);
         statement.reset()?;
         statement.bind((":ip", ip))?;
@@ -94,7 +96,7 @@ impl IpInfoModule {
         Ok(n > 0)
     }
 
-    pub fn get_by_ip(&mut self, ip: &str) -> Result<model::IpInfo> {
+    pub fn get_by_ip(&self, ip: &str) -> Result<model::IpInfo> {
         let mut statement = Statements::get_by_ip(&self.connection);
         statement.reset()?;
         statement.bind((":ip", ip))?;
@@ -173,27 +175,31 @@ impl IpInfoModule {
 struct Statements;
 
 impl Statements {
+    pub fn init(con: &Connection) -> Statement<'_> {
+        con.prepare(include_str!("sql/init.sql")).unwrap()
+    }
+
     pub fn insert(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("insert.sql")).unwrap()
+        con.prepare(include_str!("sql/insert.sql")).unwrap()
     }
 
     pub fn get_all(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("get_all.sql")).unwrap()
+        con.prepare(include_str!("sql/get_all.sql")).unwrap()
     }
 
     pub fn get_by_ip(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("get_by_ip.sql")).unwrap()
+        con.prepare(include_str!("sql/get_by_ip.sql")).unwrap()
     }
 
     pub fn len(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("len.sql")).unwrap()
+        con.prepare(include_str!("sql/len.sql")).unwrap()
     }
 
     pub fn exists_ip(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("exists_ip.sql")).unwrap()
+        con.prepare(include_str!("sql/exists_ip.sql")).unwrap()
     }
 
     pub fn update(con: &Connection) -> Statement<'_> {
-        con.prepare(include_str!("update.sql")).unwrap()
+        con.prepare(include_str!("sql/update.sql")).unwrap()
     }
 }

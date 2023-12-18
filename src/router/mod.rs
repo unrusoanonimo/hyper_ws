@@ -89,7 +89,6 @@ async fn todo_router(
     panic!("todo_router is only inteded to be used as placeholder");
 }
 
-const API: &str = "/api";
 pub async fn main_router(
     req: &mut ExtendedRequest,
     modules: ModulesSendable,
@@ -98,7 +97,7 @@ pub async fn main_router(
 
     let result = match (req.method.as_str(), url) {
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
-        _ if check_route(url, API) => api::router(req, &url[API.len()..], modules).await,
+        _ if check_route(url, api::PATH) => api::router(req, &url[api::PATH.len()..], modules).await,
         ("GET", "/redirect") => redirect("/", 301),
         ("GET", _) => public_path(req, url).ok_or(AppError::NOT_FOUND),
         _ => Err(AppError::NOT_FOUND),

@@ -77,8 +77,8 @@ impl ExtendedRequest {
             xtra,
         }
     }
-    pub fn get_cookie(&self, cookie: &str) -> Option<&String> {
-        self.cookie_map.get(cookie)
+    pub fn get_cookie(&self, cookie: &str) -> Option<&str> {
+        self.cookie_map.get(cookie).map(|v| v.deref())
     }
     pub fn get_header(&self, key: &str) -> Option<&[u8]> {
         self.headers.get(key).map(|v| v.as_bytes())

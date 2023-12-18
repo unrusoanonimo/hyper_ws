@@ -6,8 +6,8 @@ use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
 use prerouting_modules::PreroutingModules;
-use std::collections::HashMap;
 use std::convert::Infallible;
+use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -27,11 +27,11 @@ async fn handle(
     prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
     let result: Result<Response<Body>, util::AppError> =
-        router::main_router(&mut req, modules).await;
+        router::main_router(&mut req, modules.clone()).await;
 
     Ok(match result {
         Ok(mut res) => {
-            prerouting.modifiers.call(&mut req, &mut res);
+            prerouting.modifiers.call(&mut req, &mut res, modules);
             res
         }
         Err(e) => {
@@ -46,6 +46,7 @@ type PreroutingSendable = Arc<PreroutingModules>;
 
 #[tokio::main]
 async fn main() {
+    test();
     logger::setup();
 
     let modules: ModulesSendable = Arc::new(AppModules::new());
@@ -78,4 +79,35 @@ async fn main() {
     if let Err(e) = server.await {
         eprintln!("server error: {}", e);
     }
+}
+fn test() {
+    struct StructIHaveNoControllAbout<'a> {
+        inner: &'a String,
+    }
+    impl<'a> StructIHaveNoControllAbout<'a> {
+        pub fn new(inner: &'a String) -> Self {
+            Self { inner }
+        }
+    }
+
+    struct Foo<'a> {
+        a: StructIHaveNoControllAbout<'a>,
+        b: StructIHaveNoControllAbout<'a>,
+    }
+
+    impl<'a> Foo<'a> {
+        fn new(inner: &'a String) -> Self {
+            Self {
+                a: StructIHaveNoControllAbout::new(inner),
+                b: StructIHaveNoControllAbout::new(inner),
+            }
+        }
+    }
+    let s = String::from("value");
+    let p1 = (&s as *const String) ;
+    let mut s2 = { s };
+    s2.push_str("ch");
+    let p2 = (&s2 as *const String) ;
+    dbg!(p1, p2);
+    unsafe { dbg!(p1.as_ref().unwrap(), p2.as_ref().unwrap()) };
 }

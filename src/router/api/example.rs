@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
+
 
 use http::Response;
 use hyper::Body;
@@ -51,27 +47,6 @@ pub async fn router(
             let a: Box<[_]> = subroute_args(url).collect();
             Response::builder()
                 .body(Body::from(a.join(" ")))
-                .or(Err(AppError::SERVER_ERROR))
-        }
-
-        ("POST", "/upload") => {
-            let name_uncheked = subroute_args(url).next().ok_or(AppError::BAD_REQUEST)?;
-
-            let name = Path::new(&name_uncheked)
-                .file_name()
-                .ok_or(AppError::BAD_REQUEST)?;
-            let mut path = PathBuf::from("public/uploads");
-
-            path.push(&name);
-            let mut file = File::create(path).or_svr_err()?;
-            file.write_all(req.read_body().await.ok_or(AppError::SERVER_ERROR)?)
-                .or_svr_err()?;
-
-            let mut url = "/uploads/".to_string();
-            url += &name.to_string_lossy();
-
-            Response::builder()
-                .body(Body::from(url))
                 .or(Err(AppError::SERVER_ERROR))
         }
 

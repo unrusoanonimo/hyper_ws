@@ -29,4 +29,4 @@ impl_new = "0.2.1"
 
 [dependencies.uuid]
 version = "1.5.0"
-features = ["v4"]
+features = ["v4","serde"]

@@ -3,7 +3,11 @@ use std::fmt::Display;
 use tokio::sync::Mutex;
 
 pub mod ip_info;
+pub mod user;
+
 pub use ip_info::IpInfoModule;
+
+pub const ATENDA_SQLITE_PATH: &str = "./data/atenda.sqlite";
 
 pub struct AppModules {
     pub ip_info: Mutex<IpInfoModule>,
