@@ -7,9 +7,8 @@ use log::info;
 use modules::AppModules;
 use prerouting_modules::PreroutingModules;
 use std::convert::Infallible;
-use std::marker::PhantomData;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Once, OnceLock};
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
 
@@ -81,33 +80,9 @@ async fn main() {
     }
 }
 fn test() {
-    struct StructIHaveNoControllAbout<'a> {
-        inner: &'a String,
-    }
-    impl<'a> StructIHaveNoControllAbout<'a> {
-        pub fn new(inner: &'a String) -> Self {
-            Self { inner }
-        }
-    }
-
-    struct Foo<'a> {
-        a: StructIHaveNoControllAbout<'a>,
-        b: StructIHaveNoControllAbout<'a>,
-    }
-
-    impl<'a> Foo<'a> {
-        fn new(inner: &'a String) -> Self {
-            Self {
-                a: StructIHaveNoControllAbout::new(inner),
-                b: StructIHaveNoControllAbout::new(inner),
-            }
-        }
-    }
-    let s = String::from("value");
-    let p1 = (&s as *const String) ;
-    let mut s2 = { s };
-    s2.push_str("ch");
-    let p2 = (&s2 as *const String) ;
-    dbg!(p1, p2);
-    unsafe { dbg!(p1.as_ref().unwrap(), p2.as_ref().unwrap()) };
+    let modules: ModulesSendable = Arc::new(AppModules::new());
+    let n = modules.user.get_by_id("2".into());
+    println!("{}", n);
+    let n = modules.user.get_by_id("1".into());
+    println!("{}", n);
 }

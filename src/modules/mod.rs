@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use sqlite::Connection;
 use tokio::sync::Mutex;
 
 pub mod ip_info;
@@ -7,17 +8,22 @@ pub mod user;
 
 pub use ip_info::IpInfoModule;
 
-pub const ATENDA_SQLITE_PATH: &str = "./data/atenda.sqlite";
+use self::user::UserModule;
 
 pub struct AppModules {
     pub ip_info: Mutex<IpInfoModule>,
+    pub user: UserModule,
 }
 
 impl AppModules {
     pub fn new() -> Self {
         Self {
             ip_info: Mutex::new(IpInfoModule::new()),
+            user: UserModule::new(),
         }
+    }
+    pub fn atenda_conection() -> Connection {
+        Connection::open("data/atenda.sqlite").unwrap()
     }
 }
 
