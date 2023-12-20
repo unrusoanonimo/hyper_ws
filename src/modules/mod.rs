@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use sqlite::Connection;
+use mysql::{OptsBuilder, Pool, PooledConn};
+use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
 pub mod ip_info;
@@ -15,6 +16,13 @@ pub struct AppModules {
     pub user: UserModule,
 }
 
+static DB_POOL: Lazy<Pool> = Lazy::new(|| {
+    let opts = OptsBuilder::new()
+        .user(Some("atenda_prime"))
+        .db_name(Some("atenda_prime"))
+        .pass(Some("abc123."));
+    Pool::new(opts).unwrap()
+});
 impl AppModules {
     pub fn new() -> Self {
         Self {
@@ -22,8 +30,8 @@ impl AppModules {
             user: UserModule::new(),
         }
     }
-    pub fn atenda_conection() -> Connection {
-        Connection::open("data/atenda.sqlite").unwrap()
+    pub fn atenda_conection() -> PooledConn {
+        DB_POOL.get_conn().unwrap()
     }
 }
 

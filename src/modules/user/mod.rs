@@ -1,68 +1,47 @@
-use std::{
-    ops::DerefMut,
-    sync::{
-        mpsc::{channel, Sender},
-        Arc, Mutex, OnceLock,
-    },
-    thread, time::Duration,
-};
+use std::sync::{Arc, Mutex, RwLock};
 
-use sqlite::{Connection, Statement};
+use mysql::{prelude::Queryable, PooledConn, Statement};
 
 use super::AppModules;
 
 pub struct UserModule {
-    // connection: Connection,
-    // statements: Statements<'a>,
-    sender: Sender<Querry>,
+    statements: Statements,
+    con: RwLock<PooledConn>,
 }
+
 pub enum Querry {
     GetById(Arc<Mutex<Option<String>>>, String),
 }
 impl UserModule {
     pub fn new() -> Self {
-        let (sender, reciver) = channel::<Querry>();
-        thread::spawn(move || {
-            let con = AppModules::atenda_conection();
-            let _statements = Statements::new(&con);
-
-            while let Ok(q) = reciver.recv() {
-                match q {
-                    Querry::GetById(r, mut s) => {
-                        thread::sleep(Duration::from_secs(s.parse().unwrap()));
-                        s += "manolo";
-                        r.lock().unwrap().insert(s);
-                    }
-                }
-            }
-        });
-
-        // Statements::init(&connection).next().unwrap();
-
-        Self { sender }
-    }
-
-    pub fn get_by_id(&self, id: String) -> String {
-        let r = Arc::new(Mutex::new(None));
-        self.sender
-            .send(Querry::GetById(Arc::clone(&r), id))
-            .unwrap();
-        let b = loop {
-            if let Some(v) = r.lock().unwrap().take() {
-                break v;
-            }
-        };
-        b
-    }
-}
-
-struct Statements<'a> {
-    init: Statement<'a>,
-}
-impl<'a> Statements<'a> {
-    fn new(con: &'a Connection) -> Self {
+        let mut con: PooledConn = AppModules::atenda_conection();
+        let statements = Statements::new(&mut con);
         Self {
-            init: con.prepare(include_str!("sql/init.sql")).unwrap(),
+            statements,
+            con: RwLock::new(con),
         }
+    }
+    pub fn test(&self) {
+        let r: (u32, String, String, String, String, String, bool) = self
+            .con
+            .write()
+            .unwrap()
+            .exec_first(&self.statements.test, ())
+            .unwrap()
+            .unwrap();
+        dbg!(r);
+    }
+}
+
+struct Statements {
+    test: Statement,
+}
+impl Statements {
+    fn new(con: &mut PooledConn) -> Self {
+        // "SELECT `id`,`username`,`password`,`nome`,`rol`,`avatar`,`baixa` FROM `usuario` WHERE 1"
+        let test = con
+            .prep("SELECT `id`,`username`,`password`,`nome`,`rol`,`avatar`,`baixa` FROM `usuario` WHERE 1")
+            .unwrap();
+        Self { test }
     }
 }

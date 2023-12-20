@@ -8,7 +8,7 @@ use modules::AppModules;
 use prerouting_modules::PreroutingModules;
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use std::sync::{Arc, Once, OnceLock};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
 
@@ -25,10 +25,11 @@ async fn handle(
     modules: ModulesSendable,
     prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
+
     let result: Result<Response<Body>, util::AppError> =
         router::main_router(&mut req, modules.clone()).await;
 
-    Ok(match result {
+    let response=match result {
         Ok(mut res) => {
             prerouting.modifiers.call(&mut req, &mut res, modules);
             res
@@ -37,7 +38,8 @@ async fn handle(
             log::error!("{}", e);
             e.into()
         }
-    })
+    };
+    Ok(response)
 }
 
 type ModulesSendable = Arc<AppModules>;
@@ -81,8 +83,5 @@ async fn main() {
 }
 fn test() {
     let modules: ModulesSendable = Arc::new(AppModules::new());
-    let n = modules.user.get_by_id("2".into());
-    println!("{}", n);
-    let n = modules.user.get_by_id("1".into());
-    println!("{}", n);
+    modules.user.test();
 }

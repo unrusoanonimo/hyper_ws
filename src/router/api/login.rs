@@ -1,7 +1,12 @@
 use http::Response;
 use hyper::Body;
+use uuid::Uuid;
 
-use crate::{util::AppError, ExtendedRequest, ModulesSendable};
+use crate::{
+    model::user::User,
+    util::{errors::OrServerError, AppError, XtendedResBuilder},
+    ExtendedRequest, ModulesSendable,
+};
 
 use super::ROOT;
 
@@ -15,7 +20,15 @@ pub async fn router(
 ) -> Result<Response<Body>, AppError> {
     match (req.method.as_str(), url) {
         ("POST", ROOT) => Ok(Response::builder().body(Body::from("a"))?),
-
+        ("GET", ROOT) => Response::builder()
+            .json(&User::new(
+                Uuid::new_v4(),
+                "pepe@gmail.com",
+                "Pepe",
+                false,
+                "abc123.",
+            ))
+            .or_svr_err(),
         _ => Err(AppError::NOT_FOUND),
     }
 }
