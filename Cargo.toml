@@ -27,6 +27,7 @@ reqwest = "0.11.22"
 optfield = "0.3.0"
 impl_new = "0.2.1"
 mysql = "24.0.0"
+zip = "0.6.6"
 
 [dependencies.uuid]
 version = "1.5.0"

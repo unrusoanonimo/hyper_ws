@@ -4,16 +4,16 @@ use mysql::{OptsBuilder, Pool, PooledConn};
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
+pub mod fssa;
 pub mod ip_info;
 pub mod user;
 
-pub use ip_info::IpInfoModule;
-
-use self::user::UserModule;
+pub use self::{fssa::FssaModule, ip_info::IpInfoModule, user::UserModule};
 
 pub struct AppModules {
     pub ip_info: Mutex<IpInfoModule>,
-    pub user: UserModule,
+    // pub user: UserModule,
+    pub fssa: FssaModule,
 }
 
 static DB_POOL: Lazy<Pool> = Lazy::new(|| {
@@ -23,14 +23,16 @@ static DB_POOL: Lazy<Pool> = Lazy::new(|| {
         .pass(Some("abc123."));
     Pool::new(opts).unwrap()
 });
+
 impl AppModules {
     pub fn new() -> Self {
         Self {
             ip_info: Mutex::new(IpInfoModule::new()),
-            user: UserModule::new(),
+            // user: UserModule::new(),
+            fssa: FssaModule::new(),
         }
     }
-    pub fn atenda_conection() -> PooledConn {
+    pub fn get_conncection() -> PooledConn {
         DB_POOL.get_conn().unwrap()
     }
 }

@@ -14,7 +14,7 @@ pub enum Querry {
 }
 impl UserModule {
     pub fn new() -> Self {
-        let mut con: PooledConn = AppModules::atenda_conection();
+        let mut con: PooledConn = AppModules::get_conncection();
         let statements = Statements::new(&mut con);
         Self {
             statements,
@@ -22,14 +22,14 @@ impl UserModule {
         }
     }
     pub fn test(&self) {
-        let r: (u32, String, String, String, String, String, bool) = self
-            .con
-            .write()
-            .unwrap()
-            .exec_first(&self.statements.test, ())
-            .unwrap()
-            .unwrap();
-        dbg!(r);
+        // let r: (u32, String, String, String, String, String, bool) = self
+        //     .con
+        //     .write()
+        //     .unwrap()
+        //     .exec_first(&self.statements.test, ())
+        //     .unwrap()
+        //     .unwrap();
+        // dbg!(r);
     }
 }
 

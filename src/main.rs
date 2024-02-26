@@ -7,12 +7,14 @@ use log::info;
 use modules::AppModules;
 use prerouting_modules::PreroutingModules;
 use std::convert::Infallible;
+use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use util::{ExtendedReqXtraData, ExtendedRequest};
 
 mod config;
+mod init;
 mod logger;
 mod model;
 mod modules;
@@ -25,17 +27,20 @@ async fn handle(
     modules: ModulesSendable,
     prerouting: PreroutingSendable,
 ) -> Result<Response<Body>, Infallible> {
-
+    // dbg!(&req.uri, &req.clean_url());
     let result: Result<Response<Body>, util::AppError> =
         router::main_router(&mut req, modules.clone()).await;
 
-    let response=match result {
+    let response = match result {
         Ok(mut res) => {
             prerouting.modifiers.call(&mut req, &mut res, modules);
             res
         }
         Err(e) => {
-            log::error!("{}", e);
+            match e {
+                util::AppError::StatusCode(_) => {}
+                _ => log::error!("{}", e),
+            }
             e.into()
         }
     };
@@ -47,8 +52,8 @@ type PreroutingSendable = Arc<PreroutingModules>;
 
 #[tokio::main]
 async fn main() {
-    test();
-    logger::setup();
+    init::all();
+    test().await;
 
     let modules: ModulesSendable = Arc::new(AppModules::new());
     let prerouting: PreroutingSendable = Arc::new(PreroutingModules::default());
@@ -81,7 +86,9 @@ async fn main() {
         eprintln!("server error: {}", e);
     }
 }
-fn test() {
+async fn test() {
     let modules: ModulesSendable = Arc::new(AppModules::new());
-    modules.user.test();
+    // let r = modules.fssa.release().unwrap();
+    // fs::write("test.zip", r).unwrap();
+    // modules.user.test();
 }

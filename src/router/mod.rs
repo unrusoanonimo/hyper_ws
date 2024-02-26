@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    util::{get_extension, AppError, PreparedResponse},
+    util::{files::path_in_dir, get_extension, AppError, PreparedResponse},
     ExtendedRequest, ModulesSendable,
 };
 
@@ -17,11 +17,15 @@ mod api;
 
 const ROOT: &str = "";
 const MIME_DEFAULT: &str = "application/octet-stream";
+pub const PUBLIC_DIR: &str = "./public";
 
 pub fn public_path(req: &mut ExtendedRequest, url: &str) -> Option<Response<Body>> {
-    let mut inner_path = "./public".to_string();
+    let mut inner_path = PUBLIC_DIR.to_string();
     inner_path += url;
     let mut path = PathBuf::from(&inner_path);
+    if !path_in_dir(PUBLIC_DIR, &path) {
+        return None;
+    };
     if path.is_dir() {
         if !req.uri.path().ends_with('/') {
             let mut new = url.to_owned();
@@ -46,12 +50,14 @@ pub fn public_path(req: &mut ExtendedRequest, url: &str) -> Option<Response<Body
     prep.builder
         .header(
             "Content-Type",
-            *MIMEMAP
-                .get(get_extension(url).unwrap_or_default())
-                .unwrap_or(&MIME_DEFAULT),
+            get_mime(get_extension(url).unwrap_or_default()),
         )
         .body(prep.body)
         .ok()
+}
+
+pub fn get_mime(extension: &str) -> &'static str {
+    *MIMEMAP.get(extension).unwrap_or(&MIME_DEFAULT)
 }
 
 static MIMEMAP: Lazy<HashMap<&str, &str>> =
@@ -97,7 +103,9 @@ pub async fn main_router(
 
     let result = match (req.method.as_str(), url) {
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
-        _ if check_route(url, api::PATH) => api::router(req, &url[api::PATH.len()..], modules).await,
+        _ if check_route(url, api::PATH) => {
+            api::router(req, &url[api::PATH.len()..], modules).await
+        },
         ("GET", "/redirect") => redirect("/", 301),
         ("GET", _) => public_path(req, url).ok_or(AppError::NOT_FOUND),
         _ => Err(AppError::NOT_FOUND),

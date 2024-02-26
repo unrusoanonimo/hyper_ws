@@ -1,4 +1,5 @@
 use hyper::{Body, Response};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Debug, Display};
@@ -6,18 +7,31 @@ use std::fs::File;
 
 use crate::modules;
 use crate::router::send_file;
+use crate::util::XtendedResBuilder;
 
 pub trait OrServerError<T> {
     fn or_svr_err(self) -> Result<T, AppError>;
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiError {
+    status: u16,
+    msg: String,
 }
 
 #[derive(Debug)]
 pub enum AppError {
     StatusCode(u16),
+    ApiError(ApiError),
     Dev(&'static str),
     Generic(String),
 }
 impl AppError {
+    pub fn api_error(status: u16, msg: impl Into<String>) -> Self {
+        Self::ApiError(ApiError {
+            msg: msg.into(),
+            status,
+        })
+    }
     pub const SERVER_ERROR: Self = AppError::StatusCode(500);
     pub const BAD_REQUEST: Self = AppError::StatusCode(400);
     pub const FORBIDDEN: Self = AppError::StatusCode(403);
@@ -26,11 +40,22 @@ impl AppError {
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let details: Cow<'_, str> = match self {
-            AppError::Dev(v) => Cow::Borrowed(v),
+            AppError::ApiError(v) => Cow::Owned(serde_json::to_string(v).unwrap()),
             AppError::StatusCode(s) => Cow::Owned(format!("status ({})", s)),
+            AppError::Dev(v) => Cow::Borrowed(v),
             AppError::Generic(s) => Cow::Borrowed(s),
         };
         write!(f, "AppError: {:?}", details)
+    }
+}
+impl TryInto<u16> for AppError {
+    type Error = ();
+    fn try_into(self) -> Result<u16, Self::Error> {
+        match self {
+            AppError::ApiError(e) => Ok(e.status),
+            AppError::StatusCode(s) => Ok(s),
+            AppError::Dev(_) | AppError::Generic(_) => Err(()),
+        }
     }
 }
 impl Error for AppError {}
@@ -62,6 +87,7 @@ impl Into<Response<Body>> for AppError {
         }
         match self {
             AppError::StatusCode(code) => status_code(code).unwrap_or(Response::new(Body::empty())),
+            AppError::ApiError(e) => Response::builder().json(&e).unwrap(),
             AppError::Dev(msg) => {
                 log::error!("{}", msg);
                 AppError::SERVER_ERROR.into()

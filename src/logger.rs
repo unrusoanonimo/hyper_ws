@@ -1,10 +1,16 @@
 use log::LevelFilter;
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fs::{create_dir_all, File},
+    io::Write,
+    path::PathBuf,
+};
 
 use crate::config::CONFIG;
 
-const LOG_DIR: &str = "logs";
+pub const LOG_DIR: &str = "logs";
 pub fn setup() {
+    create_dir_all(LOG_DIR).unwrap();
+
     let date = chrono::offset::Utc::now();
     let mut path = PathBuf::from(LOG_DIR);
 
