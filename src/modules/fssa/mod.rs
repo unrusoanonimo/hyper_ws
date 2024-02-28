@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::{Cursor, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use const_format::formatcp;
@@ -60,9 +60,12 @@ impl FssaModule {
 
         // zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "mods/", FILE_OPTS.clone())?;
         // zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "mods/", FILE_OPTS.clone())?;
-        zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "config/", FILE_OPTS.clone())?;
+        zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "config/", FILE_OPTS.clone()).unwrap();
 
         let data = zip.finish()?.into_inner();
-        Ok(File::create(Self::RELEASE_CACHE_PATH)?.write_all(&data)?)
+        let path=Path::new(Self::RELEASE_CACHE_PATH);
+        let prefix = path.parent().unwrap();
+        fs::create_dir_all(prefix)?;
+        Ok(File::create(path).unwrap().write_all(&data)?)
     }
 }
