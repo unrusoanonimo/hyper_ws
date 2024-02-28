@@ -40,6 +40,8 @@ impl AppModules {
 #[derive(Debug)]
 pub enum Error {
     DbError(sqlite::Error),
+    IOError(std::io::Error),
+    ZipError(zip::result::ZipError),
     InvalidOperation,
     InvalidInput,
 }
@@ -54,5 +56,14 @@ impl From<sqlite::Error> for Error {
         Self::DbError(value)
     }
 }
-
+impl From<zip::result::ZipError> for Error {
+    fn from(value: zip::result::ZipError) -> Self {
+        Self::ZipError(value)
+    }
+}
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::IOError(value)
+    }
+}
 pub type Result<T> = std::result::Result<T, Error>;

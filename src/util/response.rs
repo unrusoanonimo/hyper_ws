@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use http::{response, Response};
 use hyper::Body;
 use serde::Serialize;

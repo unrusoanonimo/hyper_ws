@@ -20,7 +20,6 @@ pub async fn router(
     url: &str,
     modules: ModulesSendable,
 ) -> Result<Response<Body>, AppError> {
-    dbg!(url);
     match (req.method.as_str(), url) {
         _ if check_route(url, login::PATH) => {
             login::router(req, &url[login::PATH.len()..], modules).await

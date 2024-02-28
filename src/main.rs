@@ -6,12 +6,16 @@ use hyper::{Body, Response, Server};
 use log::info;
 use modules::AppModules;
 use prerouting_modules::PreroutingModules;
+use zip::write::FileOptions;
 use std::convert::Infallible;
 use std::fs;
+use std::io::Cursor;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use util::zip_utils::add_dir;
 use util::{ExtendedReqXtraData, ExtendedRequest};
+use zip::ZipWriter;
 
 mod config;
 mod init;
@@ -87,7 +91,17 @@ async fn main() {
     }
 }
 async fn test() {
-    let modules: ModulesSendable = Arc::new(AppModules::new());
+    let cursor: Cursor<Vec<u8>> = Cursor::new(vec![]);
+
+    let mut zip = ZipWriter::new(cursor);
+    add_dir(
+        &mut zip,
+        "./data/fssa/client",
+        "cli",
+        FileOptions::default().compression_level(Some(9)),
+    ).unwrap();
+    fs::write("test.zip", zip.finish().unwrap().into_inner()).unwrap();
+    // let modules: ModulesSendable = Arc::new(AppModules::new());
     // let r = modules.fssa.release().unwrap();
     // fs::write("test.zip", r).unwrap();
     // modules.user.test();

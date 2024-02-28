@@ -63,8 +63,10 @@ impl From<modules::Error> for AppError {
     fn from(value: modules::Error) -> Self {
         match value {
             modules::Error::DbError(_) => Self::SERVER_ERROR,
+            modules::Error::IOError(_) => Self::SERVER_ERROR,
+            modules::Error::ZipError(_) => Self::SERVER_ERROR,
+            modules::Error::InvalidOperation => Self::SERVER_ERROR,
             modules::Error::InvalidInput => Self::BAD_REQUEST,
-            modules::Error::InvalidOperation => Self::BAD_REQUEST,
         }
     }
 }

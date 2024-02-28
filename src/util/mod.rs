@@ -4,6 +4,7 @@ pub mod request;
 pub mod response;
 pub mod unsafe_utils;
 pub mod errors;
+pub mod zip_utils;
 
 pub use files::get_extension;
 pub use parsers::count_map;

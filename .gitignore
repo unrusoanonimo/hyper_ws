@@ -1,3 +1,4 @@
 /target
 /logs
-/data/fssa/**
+/cache
+/data/fssa
