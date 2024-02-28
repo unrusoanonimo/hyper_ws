@@ -59,8 +59,8 @@ impl FssaModule {
         let mut zip = ZipWriter::new(cursor);
 
         zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "mods/", FILE_OPTS.clone())?;
-        zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "mods/", FILE_OPTS.clone())?;
-        zip_utils::add_dir(&mut zip, Self::BOTH_MOD_DIR, "config/", FILE_OPTS.clone()).unwrap();
+        zip_utils::add_dir(&mut zip, Self::SERVER_MOD_DIR, "mods/", FILE_OPTS.clone())?;
+        zip_utils::add_dir(&mut zip, Self::CONFIG_DIR, "config/", FILE_OPTS.clone()).unwrap();
 
         let data = zip.finish()?.into_inner();
         let path=Path::new(Self::RELEASE_CACHE_PATH);
