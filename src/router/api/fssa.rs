@@ -22,7 +22,7 @@ pub async fn router(
 
         _ if check_route(url, "/mod") => {
             let args: Box<[_]> = subroute_args(url).collect();
-            let filename = *args.get(0).ok_or(AppError::BAD_REQUEST)?;
+            let filename = *args.get(1).ok_or(AppError::BAD_REQUEST)?;
 
             let data = modules.fssa.get_mod(filename).ok_or(AppError::api_error(
                 AppError::NOT_FOUND.try_into().unwrap(),

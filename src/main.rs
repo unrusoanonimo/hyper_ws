@@ -86,6 +86,7 @@ async fn main() {
     }
 }
 async fn test() {
+
     // let cursor: Cursor<Vec<u8>> = Cursor::new(vec![]);
 
     // let mut zip = ZipWriter::new(cursor);
@@ -96,7 +97,8 @@ async fn test() {
     //     FileOptions::default().compression_level(Some(9)),
     // ).unwrap();
     // fs::write("test.zip", zip.finish().unwrap().into_inner()).unwrap();
-    // let modules: ModulesSendable = Arc::new(AppModules::new());
+    let modules: ModulesSendable = Arc::new(AppModules::new());
+    dbg!(modules.fssa.get_mod("armorpointspp-fabric-1.20-3.1.2.jar").unwrap().len());
     // let r = modules.fssa.release().unwrap();
     // fs::write("test.zip", r).unwrap();
     // modules.user.test();
