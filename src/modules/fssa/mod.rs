@@ -63,7 +63,7 @@ impl FssaModule {
         zip_utils::add_dir(&mut zip, Self::CONFIG_DIR, "config/", FILE_OPTS.clone()).unwrap();
 
         let data = zip.finish()?.into_inner();
-        let path=Path::new(Self::RELEASE_CACHE_PATH);
+        let path = Path::new(Self::RELEASE_CACHE_PATH);
         let prefix = path.parent().unwrap();
         fs::create_dir_all(prefix)?;
         Ok(File::create(path).unwrap().write_all(&data)?)

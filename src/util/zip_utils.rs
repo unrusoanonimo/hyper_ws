@@ -15,12 +15,18 @@ pub fn add_dir(
     let dir_path: PathBuf = dir_path.into();
     let prefix: PathBuf = zip_prefix.into();
 
-    for path in fs::read_dir(dir_path)? {
-        let file_path = path?;
-        let filename = file_path.file_name();
+    for dir_entry in fs::read_dir(dir_path)? {
+        let dir_entry = dir_entry?;
+        let name = dir_entry.file_name();
+        let path = dir_entry.path();
         let mut inner_name = prefix.clone();
-        inner_name.push(filename);
-        add_file(zip, file_path.path(), inner_name.to_string_lossy(), options)?;
+        inner_name.push(name);
+
+        if dir_entry.path().is_file() {
+            add_file(zip, path, inner_name.to_string_lossy(), options)?;
+        } else {
+            add_dir(zip, path, inner_name, options)?;
+        }
     }
     Ok(())
 }
