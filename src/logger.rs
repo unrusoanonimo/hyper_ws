@@ -19,11 +19,11 @@ pub fn setup() {
     assert!(!path.exists());
 
     let mut builder = env_logger::builder();
-    if !CONFIG.console() {
+    if !CONFIG.console {
         let log_file: Box<dyn Write + Send + 'static> = Box::new(File::create(path).unwrap());
         builder.target(env_logger::Target::Pipe(log_file));
     }
-    builder.filter_level(filter_from_usize(CONFIG.log_level()).unwrap());
+    builder.filter_level(filter_from_usize(CONFIG.log_level).unwrap());
     builder.init();
 }
 fn filter_from_usize(u: u8) -> Option<LevelFilter> {

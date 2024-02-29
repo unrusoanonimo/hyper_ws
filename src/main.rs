@@ -58,9 +58,9 @@ async fn main() {
     let prerouting: PreroutingSendable = Arc::new(PreroutingModules::default());
 
     // Construct our SocketAddr to listen on...
-    let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port()));
+    let addr = SocketAddr::from(([0, 0, 0, 0], CONFIG.port));
 
-    info!("server open at 127.0.0.1:{}", CONFIG.port());
+    info!("server open at 127.0.0.1:{}", CONFIG.port);
     // And a MakeService to handle each connection...
     let make_service = make_service_fn(|conn: &AddrStream| {
         let xtra = Arc::new(Mutex::new(ExtendedReqXtraData::new(conn)));
@@ -97,8 +97,8 @@ async fn test() {
     //     FileOptions::default().compression_level(Some(9)),
     // ).unwrap();
     // fs::write("test.zip", zip.finish().unwrap().into_inner()).unwrap();
-    let modules: ModulesSendable = Arc::new(AppModules::new());
-    dbg!(modules.fssa.get_mod("armorpointspp-fabric-1.20-3.1.2.jar").unwrap().len());
+    // let modules: ModulesSendable = Arc::new(AppModules::new());
+    // dbg!(modules.fssa.get_mod("armorpointspp-fabric-1.20-3.1.2.jar").unwrap().len());
     // let r = modules.fssa.release().unwrap();
     // fs::write("test.zip", r).unwrap();
     // modules.user.test();
