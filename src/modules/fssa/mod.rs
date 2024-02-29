@@ -50,7 +50,7 @@ impl FssaModule {
                 format!(
                     "{}/datapack/{}",
                     api_path,
-                    &v.unwrap().file_name().to_string_lossy()
+                    url_escape::encode_path(&v.unwrap().file_name().to_string_lossy())
                 )
             })
             .collect();
@@ -69,7 +69,7 @@ impl FssaModule {
                     .unwrap()
                     .map(move |v| {
                         let name = v.unwrap().file_name().to_string_lossy().to_string();
-                        ModData::new(modside, &name, format!("{}/mod/{}", &a_path, name))
+                        ModData::new(modside, &name, format!("{}/mod/{}", &a_path, url_escape::encode_path(&name)))
                     })
                     .collect::<Box<_>>()
             })
