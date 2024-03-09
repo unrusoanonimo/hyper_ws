@@ -4,14 +4,27 @@ use serde::{de, ser::SerializeSeq, Deserialize, Serialize};
 pub struct ModpackData {
     pub version: String,
     pub mods: Vec<ModData>,
-    pub config: String,
-    pub datapacks: Vec<String>,
+    pub config: Config,
+    pub datapacks: Vec<Datapack>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, impl_new::New)]
-pub struct ModData {
-    pub side: ModSide,
+pub struct Config{  
+    pub download: String,
+    pub hash: String,
+}
+#[derive(Serialize, Deserialize, Debug, Clone, impl_new::New)]
+pub struct Datapack{
     pub name: String,
     pub download: String,
+    pub hash: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, impl_new::New)]
+pub struct ModData {
+    pub name: String,
+    pub download: String,
+    pub side: ModSide,
+    pub hash: String,
 }
 impl ModData {}
 

@@ -17,13 +17,14 @@ mod api;
 
 const ROOT: &str = "";
 const MIME_DEFAULT: &str = "application/octet-stream";
-pub const PUBLIC_DIR: &str = "./public";
+pub static PUB_DIR: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("./public"));
 
 pub fn public_path(req: &mut ExtendedRequest, url: &str) -> Option<Response<Body>> {
-    let mut inner_path = PUBLIC_DIR.to_string();
-    inner_path += url;
-    let mut path = PathBuf::from(&inner_path);
-    if !path_in_dir(PUBLIC_DIR, &path) {
+    let mut path = PUB_DIR.clone();
+    if url.len() > 0 {
+        path.push(&url[1..]);
+    }
+    if !path_in_dir(&PUB_DIR, &path) {
         return None;
     };
     if path.is_dir() {
@@ -105,8 +106,13 @@ pub async fn main_router(
         _ if check_route(url, "/a") => Ok(Response::builder().body(Body::from("value")).unwrap()),
         _ if check_route(url, api::PATH) => {
             api::router(req, &url[api::PATH.len()..], modules).await
-        },
+        }
         ("GET", "/redirect") => redirect("/", 301),
+        // ("POST", "/shell") => Response::builder()
+        //     .json(&command::execute(String::from_utf8_lossy(
+        //         req.read_body().await.unwrap(),
+        //     )))
+        //     .map_err(|_| AppError::SERVER_ERROR),
         ("GET", _) => public_path(req, url).ok_or(AppError::NOT_FOUND),
         _ => Err(AppError::NOT_FOUND),
     };

@@ -11,7 +11,7 @@ use zip::{write::FileOptions, ZipWriter};
 use super::Result;
 use crate::{
     config::CONFIG,
-    model::fssa::{ModData, ModSide, ModpackData},
+    model::fssa::{Config, Datapack, ModData, ModSide, ModpackData},
     util::{files::is_filename, zip_utils},
 };
 
@@ -43,14 +43,24 @@ impl FssaModule {
     ];
 
     pub fn new() -> Self {
+        Self::release_init().unwrap();
+        Self::config_init().unwrap();
+
         let api_path = CONFIG.origin.clone() + "/api/fssa";
-        let datapacks: Vec<String> = fs::read_dir(Self::DATAPACKS_DIR)
+        let datapacks: Vec<Datapack> = fs::read_dir(Self::DATAPACKS_DIR)
             .unwrap()
             .map(|v| {
-                format!(
-                    "{}/datapack/{}",
-                    api_path,
-                    url_escape::encode_path(&v.unwrap().file_name().to_string_lossy())
+                let path = v.unwrap().path();
+                let name = path.file_name().unwrap().to_str().unwrap();
+
+                Datapack::new(
+                    name,
+                    format!(
+                        "{}/datapack/{}",
+                        &api_path,
+                        url_escape::encode_path(&api_path)
+                    ),
+                    sha256::try_digest(&path).unwrap(),
                 )
             })
             .collect();
@@ -64,27 +74,35 @@ impl FssaModule {
                     Self::SERVER_MOD_DIR => ModSide::SERVER,
                     _ => unreachable!(),
                 };
-                let a_path = api_path.clone();
+                let a_path = &api_path;
                 fs::read_dir(mod_dir)
                     .unwrap()
                     .map(move |v| {
-                        let name = v.unwrap().file_name().to_string_lossy().to_string();
-                        ModData::new(modside, &name, format!("{}/mod/{}", &a_path, url_escape::encode_path(&name)))
+                        let path = v.unwrap().path();
+                        let name = path.file_name().unwrap().to_str().unwrap();
+                        ModData::new(
+                            name,
+                            format!("{}/mod/{}", &a_path, url_escape::encode_path(&name)),
+                            modside,
+                            sha256::try_digest(&path).unwrap(),
+                        )
                     })
                     .collect::<Box<_>>()
             })
             .collect::<Box<[_]>>()
             .concat();
 
-        let s = Self {
-            api_path: api_path.clone(),
-            modpack: ModpackData::new(Self::MODPACK_VERSION, mods, api_path + "/config", datapacks),
-        };
-        s.release_init().unwrap();
-        s.config_init().unwrap();
-        s
+        let config = Config::new(
+            api_path.clone() + "/config",
+            sha256::try_digest(Self::CONFIG_CACHE_PATH).unwrap(),
+        );
+
+        Self {
+            api_path,
+            modpack: ModpackData::new(Self::MODPACK_VERSION, mods, config, datapacks),
+        }
     }
-    pub fn list(&self)->&ModpackData {
+    pub fn list(&self) -> &ModpackData {
         &self.modpack
     }
     pub fn config(&self) -> Result<Vec<u8>> {
@@ -109,7 +127,7 @@ impl FssaModule {
     pub fn release(&self) -> Result<Vec<u8>> {
         Ok(fs::read(Self::RELEASE_CACHE_PATH)?)
     }
-    fn release_init(&self) -> Result<()> {
+    fn release_init() -> Result<()> {
         if PathBuf::from(Self::RELEASE_CACHE_PATH).exists() {
             return Ok(());
         }
@@ -127,7 +145,7 @@ impl FssaModule {
         fs::create_dir_all(prefix)?;
         Ok(File::create(path)?.write_all(&data)?)
     }
-    fn config_init(&self) -> Result<()> {
+    fn config_init() -> Result<()> {
         if PathBuf::from(Self::CONFIG_CACHE_PATH).exists() {
             return Ok(());
         }

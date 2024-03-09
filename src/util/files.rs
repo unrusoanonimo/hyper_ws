@@ -15,18 +15,17 @@ pub fn is_filename(s: &str) -> bool {
         .into_iter()
         .any(|sub| s.contains(sub))
 }
-pub fn path_in_dir(dir: &'static str, file: &Path) -> bool {
-    // let d = if let Ok(d) = dir.canonicalize() {
-    //     d
-    // } else {
-    //     return false;
-    // };
+pub fn path_in_dir(dir: &Path, file: &Path) -> bool {
+    let d = if let Ok(d) = dir.canonicalize() {
+        d
+    } else {
+        return false;
+    };
 
     let f = if let Ok(f) = file.canonicalize() {
         f
     } else {
         return false;
     };
-
-    f.starts_with(dir)
+    f.starts_with(d)
 }

@@ -1,13 +1,13 @@
 use std::{
     fs,
-    io::{Cursor, Write},
+    io::{Seek, Write},
     path::{Path, PathBuf},
 };
 
 use zip::{write::FileOptions, ZipWriter};
 
 pub fn add_dir(
-    zip: &mut ZipWriter<Cursor<Vec<u8>>>,
+    zip: &mut ZipWriter<impl Write + Seek>,
     dir_path: impl Into<PathBuf>,
     zip_prefix: impl Into<PathBuf>,
     options: FileOptions,
@@ -32,7 +32,7 @@ pub fn add_dir(
 }
 
 pub fn add_file(
-    zip: &mut ZipWriter<Cursor<Vec<u8>>>,
+    zip: &mut ZipWriter<impl Write + Seek>,
     file_path: impl AsRef<Path>,
     inner_name: impl Into<String>,
     options: FileOptions,
